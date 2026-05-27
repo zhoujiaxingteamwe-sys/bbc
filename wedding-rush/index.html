@@ -1,0 +1,1192 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#190914">
+<title>新郎冲冲冲：婚礼倒计时</title>
+<style>
+:root {
+  --bg: #170812;
+  --panel: rgba(31, 9, 24, .78);
+  --panel-strong: rgba(40, 10, 31, .92);
+  --gold: #ffd36a;
+  --pink: #ff75a8;
+  --red: #ff4d6d;
+  --text: #fff7f9;
+  --muted: rgba(255, 247, 249, .72);
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { width: 100%; height: 100%; overflow: hidden; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+  color: var(--text);
+  background:
+    radial-gradient(circle at 20% 10%, rgba(255, 117, 168, .28), transparent 28%),
+    radial-gradient(circle at 80% 90%, rgba(255, 211, 106, .18), transparent 30%),
+    linear-gradient(135deg, #130710, #2a0f25 48%, #491729);
+  touch-action: none;
+  user-select: none;
+  -webkit-font-smoothing: antialiased;
+}
+.game-page {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: max(8px, var(--safe-top)) 8px max(8px, var(--safe-bottom));
+}
+.game-shell {
+  position: relative;
+  width: min(100vw, 177.777vh);
+  height: min(56.25vw, 100vh);
+  max-width: 1280px;
+  max-height: 720px;
+  border-radius: 22px;
+  overflow: hidden;
+  box-shadow: 0 28px 90px rgba(0, 0, 0, .5), inset 0 0 0 1px rgba(255,255,255,.16);
+  background: #000;
+}
+canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+  background: #5ac7ff;
+}
+.screen-overlay {
+  position: absolute;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 28px;
+  background: linear-gradient(90deg, rgba(22, 5, 16, .68), rgba(22, 5, 16, .08), rgba(22, 5, 16, .68));
+  pointer-events: none;
+}
+.screen-overlay.show { display: flex; }
+.menu-card {
+  width: min(520px, 92%);
+  padding: 26px;
+  border: 1px solid rgba(255,255,255,.2);
+  border-radius: 24px;
+  background: var(--panel);
+  box-shadow: 0 20px 60px rgba(0,0,0,.36);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  pointer-events: auto;
+}
+.menu-card h1 {
+  font-size: clamp(28px, 5vw, 46px);
+  line-height: 1.05;
+  letter-spacing: -1px;
+  color: #fff;
+  text-shadow: 0 4px 18px rgba(255, 77, 109, .7);
+}
+.menu-card .tagline {
+  margin-top: 10px;
+  color: var(--gold);
+  font-weight: 700;
+  font-size: 16px;
+}
+.menu-card p {
+  margin-top: 14px;
+  color: var(--muted);
+  line-height: 1.7;
+  font-size: 14px;
+}
+.button-row { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 22px; }
+.game-btn {
+  border: 0;
+  border-radius: 999px;
+  padding: 13px 22px;
+  color: #3b0c16;
+  font-weight: 900;
+  font-size: 15px;
+  cursor: pointer;
+  background: linear-gradient(135deg, #fff5b8, var(--gold));
+  box-shadow: 0 10px 24px rgba(255, 211, 106, .32);
+}
+.game-btn.secondary {
+  color: #fff;
+  background: rgba(255,255,255,.14);
+  border: 1px solid rgba(255,255,255,.2);
+  box-shadow: none;
+}
+.game-btn:active { transform: translateY(1px) scale(.98); }
+.tips {
+  margin-top: 16px;
+  display: grid;
+  gap: 8px;
+  color: rgba(255,255,255,.76);
+  font-size: 13px;
+}
+.touch-controls {
+  position: absolute;
+  inset: auto 0 calc(14px + var(--safe-bottom)) 0;
+  display: none;
+  justify-content: space-between;
+  align-items: flex-end;
+  padding: 0 24px;
+  pointer-events: none;
+}
+.touch-controls.show { display: flex; }
+.touch-group { display: flex; gap: 14px; pointer-events: auto; }
+.touch-btn {
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,.28);
+  color: #fff;
+  font-weight: 900;
+  font-size: 15px;
+  background: rgba(44, 11, 35, .54);
+  box-shadow: 0 12px 36px rgba(0,0,0,.3), inset 0 0 20px rgba(255,255,255,.08);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+.touch-btn.primary {
+  background: linear-gradient(135deg, rgba(255, 77, 109, .86), rgba(255, 117, 168, .68));
+}
+.touch-btn:active, .touch-btn.active { transform: scale(.95); filter: brightness(1.14); }
+.corner-note {
+  position: absolute;
+  right: 14px;
+  top: 12px;
+  padding: 7px 10px;
+  border-radius: 999px;
+  background: rgba(0,0,0,.28);
+  color: rgba(255,255,255,.78);
+  font-size: 12px;
+  pointer-events: none;
+}
+@media (max-width: 740px) {
+  .game-shell { border-radius: 0; width: 100vw; height: 56.25vw; max-height: 100vh; }
+  .game-page { padding: 0; }
+  .menu-card { padding: 20px; }
+  .touch-btn { width: 66px; height: 66px; }
+  .touch-controls { padding: 0 14px; }
+}
+@media (orientation: portrait) and (max-width: 760px) {
+  .game-shell { transform: translateY(-3vh); }
+  .touch-controls { bottom: calc(10px + var(--safe-bottom)); }
+}
+</style>
+</head>
+<body>
+<div class="game-page">
+  <div class="game-shell" id="gameShell">
+    <canvas id="gameCanvas" width="1280" height="720" aria-label="新郎冲冲冲游戏画面"></canvas>
+    <div class="screen-overlay show" id="screenOverlay"></div>
+    <div class="touch-controls" id="touchControls">
+      <div class="touch-group">
+        <button class="touch-btn" data-touch="left">左</button>
+        <button class="touch-btn" data-touch="right">右</button>
+      </div>
+      <div class="touch-group">
+        <button class="touch-btn" data-touch="jump">跳跃</button>
+        <button class="touch-btn primary" data-touch="throw">撒糖</button>
+      </div>
+    </div>
+    <div class="corner-note">Enter 开始 · P 暂停</div>
+  </div>
+</div>
+
+<script>
+(() => {
+  'use strict';
+
+  const canvas = document.getElementById('gameCanvas');
+  const ctx = canvas.getContext('2d');
+  const overlay = document.getElementById('screenOverlay');
+  const touchControls = document.getElementById('touchControls');
+
+  const W = 1280;
+  const H = 720;
+  const GROUND_Y = 612;
+  const GRAVITY = 2200;
+  const JUMP_V = -820;
+  const RUN_SPEED = 220;
+  const LEVEL_END_X = 5250;
+  const BOSS_X = 3900;
+  const TIME_LIMIT = 180;
+  const DEBUG_HITBOXES = false;
+
+  ctx.imageSmoothingEnabled = false;
+
+  const manifest = {
+    cover: 'assets/cover.png',
+    streetBg: 'assets/street_bg.png',
+    groom: 'assets/groom_spritesheet.png',
+    bride: 'assets/bride_spritesheet.png',
+    redPacket: 'assets/red_packet_enemy_spritesheet.png',
+    balloon: 'assets/balloon_enemy_spritesheet.png',
+    trafficBoss: 'assets/traffic_boss_spritesheet.png',
+    items: 'assets/items_spritesheet.png',
+    candy: 'assets/candy_bullet.png',
+    roadblock: 'assets/roadblock.png',
+    weddingCar: 'assets/wedding_car.png',
+    weddingArch: 'assets/wedding_arch.png',
+    hudBar: 'assets/hud_bar.png'
+  };
+
+  const images = {};
+  const keys = Object.create(null);
+  const touch = { left: false, right: false, jump: false, throw: false };
+
+  const frames = {
+    groom: {
+      idle: [
+        r(45, 35, 180, 180), r(245, 35, 190, 180), r(440, 35, 185, 180), r(605, 35, 190, 180)
+      ],
+      run: [
+        r(20, 225, 190, 180), r(190, 225, 175, 180), r(350, 225, 185, 180),
+        r(530, 225, 175, 180), r(680, 225, 185, 180), r(840, 225, 180, 180)
+      ],
+      jump: [r(42, 420, 185, 185), r(215, 415, 185, 185)],
+      attack: [r(25, 620, 200, 180), r(245, 620, 210, 180), r(480, 620, 190, 180), r(650, 620, 190, 180)],
+      hurt: [r(18, 805, 210, 205), r(225, 805, 230, 205)]
+    },
+    redPacket: {
+      idle: [r(80, 55, 220, 210), r(315, 55, 220, 210), r(560, 55, 230, 210), r(805, 55, 220, 210)],
+      walk: [r(82, 292, 180, 215), r(315, 292, 180, 215), r(560, 292, 180, 215), r(805, 292, 180, 215), r(1040, 292, 180, 215), r(1270, 292, 190, 215)],
+      hit: [r(70, 535, 230, 210), r(335, 535, 230, 210)],
+      die: [r(70, 790, 230, 190), r(330, 785, 230, 190), r(565, 805, 190, 160), r(785, 835, 210, 130)]
+    },
+    balloon: {
+      float: [r(18, 125, 245, 370), r(270, 115, 245, 350), r(500, 150, 250, 350), r(755, 115, 245, 350)],
+      pop: [r(20, 575, 245, 330), r(270, 555, 250, 340), r(530, 570, 235, 330), r(785, 585, 210, 320)]
+    },
+    boss: {
+      idle: [r(35, 55, 470, 350), r(545, 55, 470, 350), r(1045, 55, 470, 350), r(1540, 55, 470, 350)],
+      attack: [r(50, 440, 470, 350), r(560, 440, 480, 350), r(1070, 440, 500, 350), r(1550, 440, 490, 350)],
+      hurt: [r(45, 790, 470, 350), r(540, 820, 470, 330)],
+      die: [r(40, 1160, 480, 340), r(530, 1130, 500, 370), r(1030, 1160, 500, 340), r(1530, 1160, 500, 340)]
+    },
+    bride: {
+      idle: [r(180, 40, 210, 310), r(380, 40, 210, 310), r(590, 40, 210, 310), r(790, 40, 220, 310)],
+      wave: [r(185, 350, 210, 310), r(380, 350, 220, 310), r(590, 350, 220, 310), r(790, 350, 230, 310)],
+      happy: [r(170, 675, 220, 320), r(380, 675, 220, 320), r(585, 675, 220, 320), r(795, 675, 220, 320)]
+    }
+  };
+
+  const assetRects = {
+    candy: r(103, 364, 783, 281),
+    roadblock: r(273, 283, 1502, 1471),
+    car: r(27, 225, 983, 501),
+    arch: r(11, 207, 2016, 1670),
+    hud: r(3, 290, 1018, 324),
+    items: {
+      redPacket: r(35, 428, 123, 164),
+      ring: r(198, 435, 129, 157),
+      candy: r(353, 480, 163, 66),
+      rose: r(543, 428, 126, 170),
+      memory: r(696, 431, 139, 158),
+      heart: r(863, 454, 144, 126)
+    }
+  };
+
+  const levelEvents = [
+    { at: 520, type: 'roadblock' },
+    { at: 760, type: 'redPacket' },
+    { at: 1010, type: 'pickup', item: 'redPacket' },
+    { at: 1240, type: 'redPacket' },
+    { at: 1500, type: 'roadblock' },
+    { at: 1790, type: 'balloon' },
+    { at: 2050, type: 'pickup', item: 'ring' },
+    { at: 2320, type: 'redPacket' },
+    { at: 2580, type: 'roadblock' },
+    { at: 2860, type: 'pickup', item: 'memory' },
+    { at: 3140, type: 'redPacket' },
+    { at: 3420, type: 'balloon' },
+    { at: BOSS_X, type: 'boss' },
+    { at: 4550, type: 'pickup', item: 'heart' },
+    { at: 4950, type: 'roadblock' },
+    { at: LEVEL_END_X, type: 'goal' }
+  ];
+
+  const game = {
+    mode: 'loading',
+    loadProgress: 0,
+    lastTime: 0,
+    cameraX: 0,
+    score: 0,
+    redPackets: 0,
+    timeLeft: TIME_LIMIT,
+    eventIndex: 0,
+    entities: [],
+    bullets: [],
+    particles: [],
+    boss: null,
+    goal: null,
+    ceremony: null,
+    screenShake: 0,
+    message: ''
+  };
+
+  const player = {
+    x: 210,
+    y: GROUND_Y - 132,
+    w: 112,
+    h: 132,
+    vx: 0,
+    vy: 0,
+    hearts: 3,
+    maxHearts: 3,
+    grounded: true,
+    invuln: 0,
+    throwCooldown: 0,
+    animTime: 0,
+    state: 'idle'
+  };
+
+  function r(sx, sy, sw, sh) { return { sx, sy, sw, sh }; }
+  function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+  function choose(arr, t, fps = 8) { return arr[Math.floor(t * fps) % arr.length]; }
+  function img(name) { return images[name]; }
+
+  function loadAssets() {
+    const entries = Object.entries(manifest);
+    let done = 0;
+    return Promise.all(entries.map(([name, src]) => new Promise(resolve => {
+      const image = new Image();
+      image.onload = () => {
+        images[name] = image;
+        done += 1;
+        game.loadProgress = done / entries.length;
+        resolve();
+      };
+      image.onerror = () => {
+        console.warn('素材加载失败:', src);
+        images[name] = null;
+        done += 1;
+        game.loadProgress = done / entries.length;
+        resolve();
+      };
+      image.src = src;
+    }))).then(() => {
+      game.mode = 'menu';
+      updateOverlay();
+    });
+  }
+
+  function resetGame() {
+    game.cameraX = 0;
+    game.score = 0;
+    game.redPackets = 0;
+    game.timeLeft = TIME_LIMIT;
+    game.eventIndex = 0;
+    game.entities = [];
+    game.bullets = [];
+    game.particles = [];
+    game.boss = null;
+    game.goal = null;
+    game.ceremony = null;
+    game.screenShake = 0;
+    game.message = '';
+    player.x = 210;
+    player.y = GROUND_Y - player.h;
+    player.vx = 0;
+    player.vy = 0;
+    player.hearts = player.maxHearts;
+    player.grounded = true;
+    player.invuln = 0;
+    player.throwCooldown = 0;
+    player.animTime = 0;
+    player.state = 'run';
+  }
+
+  function startGame() {
+    resetGame();
+    game.mode = 'playing';
+    updateOverlay();
+  }
+
+  function setMode(mode) {
+    game.mode = mode;
+    updateOverlay();
+  }
+
+  function updateOverlay() {
+    touchControls.classList.toggle('show', game.mode === 'playing' || game.mode === 'paused');
+    if (game.mode === 'loading') {
+      overlay.classList.add('show');
+      overlay.innerHTML = `
+        <div class="menu-card">
+          <h1>新郎冲冲冲</h1>
+          <div class="tagline">婚礼倒计时素材加载中...</div>
+          <p>正在准备玫瑰、喜糖、婚车和美泉宫婚礼现场。</p>
+          <p>加载进度：${Math.round(game.loadProgress * 100)}%</p>
+        </div>`;
+      return;
+    }
+
+    if (game.mode === 'menu') {
+      overlay.classList.add('show');
+      overlay.innerHTML = `
+        <div class="menu-card">
+          <h1>新郎冲冲冲<br>婚礼倒计时</h1>
+          <div class="tagline">180 秒内穿过婚礼大道，准时抵达花门！</div>
+          <p>跳过路障，撒喜糖击败红包怪和堵车怪，收集红包与戒指，最后冲到婚车和新娘身边。</p>
+          <div class="button-row">
+            <button class="game-btn" data-action="start">开始迎亲</button>
+            <button class="game-btn secondary" data-action="help">操作说明</button>
+          </div>
+          <div class="tips">
+            <span>键盘：A/D 或 ←/→ 移动，Space/W/↑ 跳跃，J/K 撒糖。</span>
+            <span>手机：使用屏幕底部按钮操作。</span>
+          </div>
+        </div>`;
+      return;
+    }
+
+    if (game.mode === 'paused') {
+      overlay.classList.add('show');
+      overlay.innerHTML = `
+        <div class="menu-card">
+          <h1>婚礼暂停中</h1>
+          <div class="tagline">新郎整理一下领结。</div>
+          <p>当前分数：${game.score}　红包：${game.redPackets}</p>
+          <div class="button-row">
+            <button class="game-btn" data-action="resume">继续奔赴</button>
+            <button class="game-btn secondary" data-action="restart">重新开始</button>
+          </div>
+        </div>`;
+      return;
+    }
+
+    if (game.mode === 'win') {
+      overlay.classList.add('show');
+      overlay.innerHTML = `
+        <div class="menu-card">
+          <h1>婚礼准时开始！</h1>
+          <div class="tagline">新郎成功抵达，新娘正在花门前等待。</div>
+          <p>最终分数：${game.score}　红包：${game.redPackets}　剩余时间：${Math.ceil(game.timeLeft)} 秒</p>
+          <div class="button-row">
+            <button class="game-btn" data-action="restart">再冲一次</button>
+            <button class="game-btn secondary" data-action="menu">返回封面</button>
+          </div>
+        </div>`;
+      return;
+    }
+
+    if (game.mode === 'gameOver') {
+      overlay.classList.add('show');
+      overlay.innerHTML = `
+        <div class="menu-card">
+          <h1>婚礼迟到了！</h1>
+          <div class="tagline">${game.message || '新郎被婚礼闹关拦住了。'}</div>
+          <p>本次分数：${game.score}　红包：${game.redPackets}</p>
+          <div class="button-row">
+            <button class="game-btn" data-action="restart">重新迎亲</button>
+            <button class="game-btn secondary" data-action="menu">返回封面</button>
+          </div>
+        </div>`;
+      return;
+    }
+
+    overlay.classList.remove('show');
+    overlay.innerHTML = '';
+  }
+
+  overlay.addEventListener('click', event => {
+    const button = event.target.closest('[data-action]');
+    if (!button) return;
+    const action = button.dataset.action;
+    if (action === 'start' || action === 'restart') startGame();
+    if (action === 'resume') setMode('playing');
+    if (action === 'menu') setMode('menu');
+    if (action === 'help') {
+      overlay.querySelector('.tips')?.insertAdjacentHTML('beforeend', '<span>小技巧：Boss 出现后会挡路，多撒几颗喜糖就能让婚车通行。</span>');
+    }
+  });
+
+  window.addEventListener('keydown', event => {
+    const code = event.code;
+    keys[code] = true;
+    if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(code)) event.preventDefault();
+    if (code === 'Enter' && ['menu', 'win', 'gameOver'].includes(game.mode)) startGame();
+    if (code === 'KeyP' && game.mode === 'playing') setMode('paused');
+    else if (code === 'KeyP' && game.mode === 'paused') setMode('playing');
+  }, { passive: false });
+
+  window.addEventListener('keyup', event => { keys[event.code] = false; });
+
+  document.querySelectorAll('[data-touch]').forEach(button => {
+    const name = button.dataset.touch;
+    const on = event => {
+      event.preventDefault();
+      touch[name] = true;
+      button.classList.add('active');
+      if (name === 'jump') requestJump();
+      if (name === 'throw') throwCandy();
+    };
+    const off = event => {
+      event.preventDefault();
+      touch[name] = false;
+      button.classList.remove('active');
+    };
+    button.addEventListener('pointerdown', on);
+    button.addEventListener('pointerup', off);
+    button.addEventListener('pointercancel', off);
+    button.addEventListener('pointerleave', off);
+  });
+
+  function update(dt) {
+    if (game.mode !== 'playing') return;
+
+    game.timeLeft -= dt;
+    if (game.timeLeft <= 0) {
+      game.timeLeft = 0;
+      game.message = '婚礼倒计时结束了。';
+      setMode('gameOver');
+      return;
+    }
+
+    player.animTime += dt;
+    player.throwCooldown = Math.max(0, player.throwCooldown - dt);
+    player.invuln = Math.max(0, player.invuln - dt);
+    game.screenShake = Math.max(0, game.screenShake - dt * 28);
+
+    if (pressed('Space') || pressed('ArrowUp') || pressed('KeyW') || touch.jump) requestJump();
+    if (pressed('KeyJ') || pressed('KeyK') || touch.throw) throwCandy();
+
+    const moveLeft = held('ArrowLeft') || held('KeyA') || touch.left;
+    const moveRight = held('ArrowRight') || held('KeyD') || touch.right;
+    player.vx = 0;
+    if (moveLeft) player.vx -= 250;
+    if (moveRight) player.vx += 280;
+    player.x = clamp(player.x + player.vx * dt, 120, 500);
+
+    player.vy += GRAVITY * dt;
+    player.y += player.vy * dt;
+    if (player.y + player.h >= GROUND_Y) {
+      player.y = GROUND_Y - player.h;
+      player.vy = 0;
+      player.grounded = true;
+    } else {
+      player.grounded = false;
+    }
+
+    const nearBossGate = game.boss && !game.boss.defeated && game.cameraX > BOSS_X - 720;
+    let scrollSpeed = RUN_SPEED + (moveRight ? 80 : 0) - (moveLeft ? 24 : 0);
+    if (nearBossGate) scrollSpeed = Math.min(scrollSpeed, 38);
+    game.cameraX = Math.min(LEVEL_END_X - 260, game.cameraX + scrollSpeed * dt);
+
+    spawnEvents();
+    updateEntities(dt);
+    updateBullets(dt);
+    updateParticles(dt);
+    handleCollisions();
+
+    if (game.boss && game.boss.defeated && !game.goal) spawnGoal();
+    if (game.goal && !game.ceremony && playerWorldX() > game.goal.worldX - 260) startCeremony();
+    updateCeremony(dt);
+  }
+
+  function held(code) { return !!keys[code]; }
+  function pressed(code) { return !!keys[code]; }
+
+  function requestJump() {
+    if (game.mode !== 'playing') return;
+    if (!player.grounded) return;
+    player.vy = JUMP_V;
+    player.grounded = false;
+    addFloatText(player.x + 55, player.y - 8, '冲！', '#ffd36a');
+  }
+
+  function throwCandy() {
+    if (game.mode !== 'playing') return;
+    if (player.throwCooldown > 0) return;
+    player.throwCooldown = 0.32;
+    player.state = 'attack';
+    player.animTime = 0;
+    game.bullets.push({
+      worldX: playerWorldX() + 78,
+      y: player.y + 55,
+      w: 46,
+      h: 24,
+      vx: 760,
+      life: 1.15
+    });
+  }
+
+  function spawnEvents() {
+    while (game.eventIndex < levelEvents.length && levelEvents[game.eventIndex].at < game.cameraX + W + 260) {
+      const event = levelEvents[game.eventIndex++];
+      if (event.type === 'roadblock') spawnRoadblock(event.at);
+      if (event.type === 'redPacket') spawnRedPacket(event.at);
+      if (event.type === 'balloon') spawnBalloon(event.at);
+      if (event.type === 'pickup') spawnPickup(event.at, event.item);
+      if (event.type === 'boss') spawnBoss(event.at);
+    }
+  }
+
+  function spawnRoadblock(worldX) {
+    game.entities.push({ type: 'roadblock', worldX, y: GROUND_Y - 78, w: 78, h: 78, hit: false });
+  }
+
+  function spawnRedPacket(worldX, y = GROUND_Y - 82) {
+    game.entities.push({ type: 'redPacket', worldX, y, w: 74, h: 82, hp: 1, vx: -24, animTime: 0, hitTimer: 0 });
+  }
+
+  function spawnBalloon(worldX) {
+    game.entities.push({ type: 'balloon', worldX, baseY: GROUND_Y - 238, y: GROUND_Y - 238, w: 76, h: 96, hp: 1, vx: -18, animTime: 0 });
+  }
+
+  function spawnPickup(worldX, item) {
+    game.entities.push({ type: 'pickup', item, worldX, y: item === 'heart' || item === 'ring' ? GROUND_Y - 170 : GROUND_Y - 122, w: 52, h: 52, animTime: 0 });
+  }
+
+  function spawnBoss(worldX) {
+    if (game.boss) return;
+    game.boss = { type: 'boss', worldX, y: GROUND_Y - 176, w: 250, h: 174, hp: 8, maxHp: 8, animTime: 0, hitTimer: 0, spawnTimer: 1.6, defeated: false, dying: 0 };
+  }
+
+  function spawnGoal() {
+    game.goal = { worldX: LEVEL_END_X, y: GROUND_Y - 250, w: 260, h: 250 };
+  }
+
+  function startCeremony() {
+    const cameraTarget = LEVEL_END_X - 690;
+    game.cameraX = cameraTarget;
+    game.entities = [];
+    game.bullets = [];
+    game.ceremony = {
+      time: 0,
+      cameraTarget,
+      groomStartX: player.x,
+      groomTargetX: 560,
+      brideX: 650,
+      finished: false
+    };
+    player.vx = 0;
+    player.vy = 0;
+    player.y = GROUND_Y - player.h;
+    player.grounded = true;
+    player.invuln = 0;
+    addFloatText(462, 344, '抵达花门！', '#ffd36a');
+  }
+
+  function updateCeremony(dt) {
+    if (!game.ceremony) return;
+    const c = game.ceremony;
+    c.time += dt;
+    game.cameraX += (c.cameraTarget - game.cameraX) * Math.min(1, dt * 6);
+    player.y = GROUND_Y - player.h;
+    player.grounded = true;
+    player.vy = 0;
+
+    if (c.time < 2.2) {
+      const t = Math.min(1, c.time / 2.2);
+      player.x = c.groomStartX + (c.groomTargetX - c.groomStartX) * easeOutCubic(t);
+      if (Math.random() < dt * 18) sparkle(player.x + 88, player.y + 54, '#ffd36a');
+    } else {
+      player.x = c.groomTargetX;
+      if (!c.finished) {
+        c.finished = true;
+        game.score += Math.ceil(game.timeLeft) * 10;
+        burstConfetti(640, 330, 140);
+        addFloatText(520, 318, '迎娶成功！', '#ffd36a');
+      }
+      if (c.time > 4.7) setMode('win');
+    }
+  }
+
+  function easeOutCubic(t) {
+    return 1 - Math.pow(1 - t, 3);
+  }
+
+  function updateEntities(dt) {
+    for (const entity of game.entities) {
+      entity.animTime = (entity.animTime || 0) + dt;
+      if (entity.vx) entity.worldX += entity.vx * dt;
+      if (entity.type === 'balloon') entity.y = entity.baseY + Math.sin(entity.animTime * 3.3) * 18;
+      if (entity.type === 'pickup') entity.y += Math.sin(entity.animTime * 5) * dt * 14;
+      entity.hitTimer = Math.max(0, (entity.hitTimer || 0) - dt);
+    }
+    game.entities = game.entities.filter(entity => !entity.dead && entity.worldX > game.cameraX - 360);
+
+    if (game.boss && !game.boss.defeated) {
+      const boss = game.boss;
+      boss.animTime += dt;
+      boss.hitTimer = Math.max(0, boss.hitTimer - dt);
+      boss.spawnTimer -= dt;
+      if (boss.spawnTimer <= 0) {
+        boss.spawnTimer = 2.8;
+        spawnRedPacket(boss.worldX + 230, GROUND_Y - 82);
+      }
+    }
+    if (game.boss && game.boss.defeated) {
+      game.boss.dying += dt;
+    }
+  }
+
+  function updateBullets(dt) {
+    for (const bullet of game.bullets) {
+      bullet.worldX += bullet.vx * dt;
+      bullet.life -= dt;
+    }
+    game.bullets = game.bullets.filter(bullet => bullet.life > 0 && bullet.worldX - game.cameraX < W + 160);
+  }
+
+  function updateParticles(dt) {
+    for (const p of game.particles) {
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.vy += (p.gravity || 0) * dt;
+      p.life -= dt;
+      p.age += dt;
+    }
+    game.particles = game.particles.filter(p => p.life > 0);
+  }
+
+  function handleCollisions() {
+    const ph = playerHitbox();
+
+    for (const bullet of game.bullets) {
+      const bh = { x: bullet.worldX - game.cameraX, y: bullet.y, w: bullet.w, h: bullet.h };
+      for (const entity of game.entities) {
+        if (!['redPacket', 'balloon'].includes(entity.type) || entity.dead) continue;
+        if (hit(bh, entityHitbox(entity))) {
+          bullet.life = 0;
+          entity.hp -= 1;
+          entity.hitTimer = .16;
+          sparkle(bh.x + 20, bh.y + 10, '#ffd36a');
+          if (entity.hp <= 0) {
+            entity.dead = true;
+            game.score += entity.type === 'balloon' ? 150 : 100;
+            game.redPackets += entity.type === 'redPacket' ? 1 : 0;
+            addFloatText(entity.worldX - game.cameraX, entity.y, '+100', '#ffd36a');
+            burstConfetti(entity.worldX - game.cameraX + entity.w / 2, entity.y + 30, 16);
+          }
+        }
+      }
+
+      if (game.boss && !game.boss.defeated && hit(bh, bossHitbox())) {
+        bullet.life = 0;
+        game.boss.hp -= 1;
+        game.boss.hitTimer = .18;
+        game.score += 50;
+        sparkle(bh.x + 22, bh.y, '#ff75a8');
+        addFloatText(game.boss.worldX - game.cameraX + 110, game.boss.y - 20, '-1', '#ff75a8');
+        if (game.boss.hp <= 0) {
+          game.boss.defeated = true;
+          game.score += 1000;
+          addFloatText(game.boss.worldX - game.cameraX + 80, game.boss.y - 35, '婚车通行！', '#ffd36a');
+          burstConfetti(game.boss.worldX - game.cameraX + 110, game.boss.y + 80, 72);
+        }
+      }
+    }
+
+    for (const entity of game.entities) {
+      if (entity.dead) continue;
+      if (entity.type === 'pickup' && hit(ph, entityHitbox(entity))) {
+        collectPickup(entity);
+        entity.dead = true;
+      } else if (['redPacket', 'balloon', 'roadblock'].includes(entity.type) && hit(ph, entityHitbox(entity))) {
+        damagePlayer(entity.type === 'roadblock' ? '撞到婚礼路障了。' : '被闹关小怪拦住了。');
+      }
+    }
+
+    if (game.boss && !game.boss.defeated && hit(ph, bossHitbox())) damagePlayer('被堵车怪挡住了去路。');
+  }
+
+  function collectPickup(entity) {
+    if (entity.item === 'redPacket') {
+      game.redPackets += 1;
+      game.score += 120;
+      addFloatText(entity.worldX - game.cameraX, entity.y, '红包+1', '#ffd36a');
+    } else if (entity.item === 'ring' || entity.item === 'heart') {
+      player.hearts = Math.min(player.maxHearts, player.hearts + 1);
+      game.score += 80;
+      addFloatText(entity.worldX - game.cameraX, entity.y, '心动+1', '#ff75a8');
+    } else if (entity.item === 'memory') {
+      game.score += 220;
+      addFloatText(entity.worldX - game.cameraX, entity.y, '回忆+220', '#9df7ff');
+    }
+    sparkle(entity.worldX - game.cameraX + 24, entity.y + 24, '#ffd36a');
+  }
+
+  function damagePlayer(message) {
+    if (player.invuln > 0) return;
+    player.hearts -= 1;
+    player.invuln = 1.15;
+    player.vy = -360;
+    player.grounded = false;
+    game.screenShake = 9;
+    sparkle(player.x + 60, player.y + 60, '#ff4d6d');
+    if (player.hearts <= 0) {
+      game.message = message;
+      setMode('gameOver');
+    }
+  }
+
+  function playerWorldX() { return game.cameraX + player.x; }
+
+  function playerHitbox() {
+    return { x: player.x + 30, y: player.y + 24, w: player.w - 52, h: player.h - 32 };
+  }
+
+  function entityHitbox(entity) {
+    const x = entity.worldX - game.cameraX;
+    if (entity.type === 'roadblock') return { x: x + 16, y: entity.y + 14, w: entity.w - 28, h: entity.h - 18 };
+    if (entity.type === 'pickup') return { x: x + 6, y: entity.y + 6, w: entity.w - 12, h: entity.h - 12 };
+    return { x: x + entity.w * .18, y: entity.y + entity.h * .14, w: entity.w * .64, h: entity.h * .72 };
+  }
+
+  function bossHitbox() {
+    const boss = game.boss;
+    return { x: boss.worldX - game.cameraX + 28, y: boss.y + 36, w: boss.w - 56, h: boss.h - 44 };
+  }
+
+  function hit(a, b) {
+    return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+  }
+
+  function sparkle(x, y, color) {
+    for (let i = 0; i < 10; i++) {
+      game.particles.push({ x, y, vx: (Math.random() - .5) * 220, vy: (Math.random() - .8) * 180, life: .45 + Math.random() * .25, age: 0, size: 4 + Math.random() * 4, color, gravity: 280 });
+    }
+  }
+
+  function burstConfetti(x, y, count) {
+    const colors = ['#ff4d6d', '#ffb3c8', '#ffd36a', '#8cf4ff', '#ffffff'];
+    for (let i = 0; i < count; i++) {
+      game.particles.push({
+        x, y,
+        vx: (Math.random() - .5) * 420,
+        vy: -260 - Math.random() * 260,
+        life: .9 + Math.random() * .8,
+        age: 0,
+        size: 3 + Math.random() * 6,
+        color: colors[i % colors.length],
+        gravity: 620
+      });
+    }
+  }
+
+  function addFloatText(x, y, text, color) {
+    game.particles.push({ x, y, vx: 0, vy: -58, life: .85, age: 0, text, color, gravity: 0 });
+  }
+
+  function render() {
+    ctx.save();
+    ctx.clearRect(0, 0, W, H);
+    ctx.imageSmoothingEnabled = false;
+
+    if (game.screenShake > 0 && game.mode === 'playing') {
+      ctx.translate((Math.random() - .5) * game.screenShake, (Math.random() - .5) * game.screenShake);
+    }
+
+    if (game.mode === 'menu' || game.mode === 'loading') {
+      drawCover();
+      drawVignette(.28);
+    } else {
+      drawGameWorld();
+    }
+
+    ctx.restore();
+
+    if (game.mode === 'playing' || game.mode === 'paused') drawHud();
+  }
+
+  function drawCover() {
+    const cover = img('cover');
+    if (!cover) {
+      drawGradientSky();
+      return;
+    }
+    drawImageCover(cover, 0, 0, W, H);
+    ctx.fillStyle = 'rgba(24, 4, 16, .18)';
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  function drawGameWorld() {
+    drawScrollingBackground();
+    drawGoal();
+    drawEntities();
+    drawBoss();
+    drawBullets();
+    drawPlayer();
+    drawParticles();
+    if (DEBUG_HITBOXES) drawDebugHitboxes();
+  }
+
+  function drawGradientSky() {
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, '#1b83d8');
+    g.addColorStop(.55, '#75dcff');
+    g.addColorStop(1, '#f7d6b7');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  function drawScrollingBackground() {
+    const bg = img('streetBg');
+    if (!bg) {
+      drawGradientSky();
+      ctx.fillStyle = '#b45a4b';
+      ctx.fillRect(0, GROUND_Y, W, H - GROUND_Y);
+      return;
+    }
+    const offset = -((game.cameraX * .72) % W);
+    ctx.drawImage(bg, offset, 0, W, H);
+    ctx.drawImage(bg, offset + W, 0, W, H);
+    if (offset > 0) ctx.drawImage(bg, offset - W, 0, W, H);
+    ctx.fillStyle = 'rgba(255, 244, 252, .05)';
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  function drawGoal() {
+    if (!game.goal) return;
+    const x = game.goal.worldX - game.cameraX;
+    const ceremony = game.ceremony;
+    const archX = ceremony ? 455 : x - 90;
+    const brideX = ceremony ? ceremony.brideX : x + 34;
+    const carX = ceremony ? 780 : x + 155;
+
+    ctx.save();
+    if (ceremony) {
+      const glow = ctx.createRadialGradient(640, 360, 40, 640, 360, 300);
+      glow.addColorStop(0, 'rgba(255, 225, 154, .42)');
+      glow.addColorStop(1, 'rgba(255, 225, 154, 0)');
+      ctx.fillStyle = glow;
+      ctx.fillRect(260, 110, 760, 480);
+      ctx.fillStyle = 'rgba(255, 117, 168, .22)';
+      roundRect(410, GROUND_Y - 35, 470, 18, 9, true);
+    }
+
+    drawSingle('weddingArch', assetRects.arch, archX, GROUND_Y - 325, 330, 330);
+    drawSingle('weddingCar', assetRects.car, carX, GROUND_Y - 118, 250, 128);
+    const brideSet = ceremony && ceremony.time > 2.2 ? frames.bride.happy : frames.bride.wave;
+    const brideFrame = choose(brideSet, performance.now() / 1000, 4);
+    drawFrame('bride', brideFrame, brideX, GROUND_Y - 198, 100, 156);
+
+    if (ceremony) {
+      ctx.fillStyle = 'rgba(38, 7, 24, .46)';
+      roundRect(405, 118, 470, 56, 20, true);
+      ctx.strokeStyle = 'rgba(255, 211, 106, .42)';
+      roundRect(405, 118, 470, 56, 20, false);
+      ctx.fillStyle = '#fff7f9';
+      ctx.font = '900 24px -apple-system, BlinkMacSystemFont, sans-serif';
+      const text = ceremony.time < 2.2 ? '新郎冲进花门，奔向新娘！' : '恭喜！婚礼正式开始！';
+      ctx.fillText(text, ceremony.time < 2.2 ? 488 : 505, 154);
+    }
+    ctx.restore();
+  }
+
+  function drawEntities() {
+    for (const entity of game.entities) {
+      const x = entity.worldX - game.cameraX;
+      if (x < -260 || x > W + 260) continue;
+      if (game.ceremony && entity.type !== 'pickup') continue;
+      if (entity.type === 'roadblock') drawSingle('roadblock', assetRects.roadblock, x - 10, entity.y - 18, entity.w + 24, entity.h + 24);
+      if (entity.type === 'redPacket') {
+        const set = entity.hitTimer > 0 ? frames.redPacket.hit : frames.redPacket.walk;
+        drawFrame('redPacket', choose(set, entity.animTime, 7), x - 28, entity.y - 26, 128, 128);
+      }
+      if (entity.type === 'balloon') drawFrame('balloon', choose(frames.balloon.float, entity.animTime, 5), x - 28, entity.y - 30, 128, 150);
+      if (entity.type === 'pickup') drawPickup(entity, x);
+    }
+  }
+
+  function drawPickup(entity, x) {
+    const rectName = entity.item === 'heart' || entity.item === 'ring' ? 'heart' : entity.item;
+    const rect = assetRects.items[rectName] || assetRects.items.redPacket;
+    drawSingle('items', rect, x, entity.y, entity.w, entity.h);
+  }
+
+  function drawBoss() {
+    const boss = game.boss;
+    if (!boss) return;
+    const x = boss.worldX - game.cameraX;
+    if (x < -360 || x > W + 360) return;
+    let set = frames.boss.idle;
+    if (boss.defeated) set = frames.boss.die;
+    else if (boss.hitTimer > 0) set = frames.boss.hurt;
+    else if (boss.spawnTimer < .65) set = frames.boss.attack;
+    drawFrame('trafficBoss', choose(set, boss.animTime + boss.dying, boss.defeated ? 3 : 5), x - 48, boss.y - 38, boss.w + 86, boss.h + 78);
+
+    if (!boss.defeated) {
+      const barW = 230;
+      const barX = x + 10;
+      const barY = boss.y - 24;
+      ctx.fillStyle = 'rgba(40, 6, 20, .72)';
+      roundRect(barX, barY, barW, 14, 7, true);
+      ctx.fillStyle = '#ff4d6d';
+      roundRect(barX + 2, barY + 2, (barW - 4) * (boss.hp / boss.maxHp), 10, 5, true);
+      ctx.fillStyle = '#fff';
+      ctx.font = '700 14px -apple-system, BlinkMacSystemFont, sans-serif';
+      ctx.fillText('堵车怪', barX + 80, barY - 6);
+    }
+  }
+
+  function drawBullets() {
+    for (const bullet of game.bullets) {
+      const x = bullet.worldX - game.cameraX;
+      drawSingle('candy', assetRects.candy, x, bullet.y, bullet.w, bullet.h);
+      ctx.fillStyle = 'rgba(255, 211, 106, .28)';
+      ctx.fillRect(x - 18, bullet.y + 9, 20, 4);
+    }
+  }
+
+  function drawPlayer() {
+    let set = frames.groom.run;
+    let fps = 9;
+    if (!player.grounded) { set = frames.groom.jump; fps = 5; }
+    else if (player.throwCooldown > .16) { set = frames.groom.attack; fps = 12; }
+    else if (Math.abs(player.vx) < 10 && game.cameraX < 30) { set = frames.groom.idle; fps = 5; }
+    if (player.invuln > 0 && Math.floor(player.invuln * 16) % 2 === 0) return;
+    const frame = choose(set, player.animTime, fps);
+    drawFrame('groom', frame, player.x - 36, player.y - 26, 168, 168);
+  }
+
+  function drawParticles() {
+    for (const p of game.particles) {
+      const alpha = clamp(p.life / 1, 0, 1);
+      ctx.globalAlpha = alpha;
+      if (p.text) {
+        ctx.font = '900 24px -apple-system, BlinkMacSystemFont, sans-serif';
+        ctx.lineWidth = 4;
+        ctx.strokeStyle = 'rgba(45, 6, 22, .7)';
+        ctx.strokeText(p.text, p.x, p.y);
+        ctx.fillStyle = p.color;
+        ctx.fillText(p.text, p.x, p.y);
+      } else {
+        ctx.fillStyle = p.color;
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.age * 8);
+        ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * .65);
+        ctx.restore();
+      }
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  function drawHud() {
+    ctx.save();
+    ctx.imageSmoothingEnabled = false;
+    ctx.fillStyle = 'rgba(36, 8, 28, .64)';
+    roundRect(24, 18, 560, 58, 18, true);
+    ctx.strokeStyle = 'rgba(255, 211, 106, .38)';
+    ctx.lineWidth = 2;
+    roundRect(24, 18, 560, 58, 18, false);
+
+    ctx.font = '900 28px -apple-system, BlinkMacSystemFont, sans-serif';
+    ctx.fillStyle = '#ff4d6d';
+    ctx.fillText('❤'.repeat(player.hearts), 46, 55);
+    ctx.fillStyle = 'rgba(255,255,255,.32)';
+    ctx.fillText('❤'.repeat(player.maxHearts - player.hearts), 46 + player.hearts * 31, 55);
+
+    ctx.fillStyle = '#fff7f9';
+    ctx.font = '800 22px -apple-system, BlinkMacSystemFont, sans-serif';
+    ctx.fillText(`红包 x${game.redPackets}`, 185, 54);
+    ctx.fillText(`分数 ${String(game.score).padStart(5, '0')}`, 315, 54);
+
+    const timeW = 245;
+    ctx.fillStyle = 'rgba(36, 8, 28, .64)';
+    roundRect(W - timeW - 24, 18, timeW, 58, 18, true);
+    ctx.strokeStyle = game.timeLeft < 20 ? '#ff4d6d' : 'rgba(255, 211, 106, .38)';
+    roundRect(W - timeW - 24, 18, timeW, 58, 18, false);
+    ctx.fillStyle = game.timeLeft < 20 ? '#ff758f' : '#ffd36a';
+    ctx.font = '900 24px -apple-system, BlinkMacSystemFont, sans-serif';
+    ctx.fillText(`婚礼倒计时 ${Math.ceil(game.timeLeft)}s`, W - timeW + 2, 54);
+
+    if (game.boss && !game.boss.defeated) {
+      ctx.fillStyle = 'rgba(36, 8, 28, .58)';
+      roundRect(440, 88, 400, 38, 16, true);
+      ctx.fillStyle = '#ffd36a';
+      ctx.font = '900 18px -apple-system, BlinkMacSystemFont, sans-serif';
+      ctx.fillText('堵车怪挡路中：撒喜糖开路！', 518, 113);
+    }
+    ctx.restore();
+  }
+
+  function drawDebugHitboxes() {
+    ctx.save();
+    ctx.strokeStyle = 'lime';
+    drawRect(playerHitbox());
+    for (const e of game.entities) drawRect(entityHitbox(e));
+    if (game.boss) drawRect(bossHitbox());
+    ctx.restore();
+  }
+
+  function drawRect(rect) { ctx.strokeRect(rect.x, rect.y, rect.w, rect.h); }
+
+  function drawSingle(name, rect, dx, dy, dw, dh) {
+    const image = img(name);
+    if (!image) {
+      ctx.fillStyle = '#ff75a8';
+      roundRect(dx, dy, dw, dh, 8, true);
+      return;
+    }
+    ctx.drawImage(image, rect.sx, rect.sy, rect.sw, rect.sh, dx, dy, dw, dh);
+  }
+
+  function drawFrame(name, frame, dx, dy, dw, dh) {
+    const image = img(name);
+    if (!image) {
+      ctx.fillStyle = name === 'groom' ? '#ffffff' : '#ff4d6d';
+      roundRect(dx, dy, dw, dh, 10, true);
+      return;
+    }
+    ctx.drawImage(image, frame.sx, frame.sy, frame.sw, frame.sh, dx, dy, dw, dh);
+  }
+
+  function drawImageCover(image, x, y, w, h) {
+    const scale = Math.max(w / image.width, h / image.height);
+    const sw = w / scale;
+    const sh = h / scale;
+    const sx = (image.width - sw) / 2;
+    const sy = (image.height - sh) / 2;
+    ctx.drawImage(image, sx, sy, sw, sh, x, y, w, h);
+  }
+
+  function drawVignette(alpha) {
+    const g = ctx.createRadialGradient(W / 2, H / 2, 180, W / 2, H / 2, 780);
+    g.addColorStop(0, `rgba(0,0,0,0)`);
+    g.addColorStop(1, `rgba(20, 3, 15, ${alpha})`);
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  function roundRect(x, y, w, h, radius, fill) {
+    const r = Math.min(radius, w / 2, h / 2);
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+    if (fill) ctx.fill();
+    else ctx.stroke();
+  }
+
+  function loop(now) {
+    const dt = Math.min((now - (game.lastTime || now)) / 1000, 0.033);
+    game.lastTime = now;
+    update(dt);
+    render();
+    if (game.mode === 'loading') updateOverlay();
+    requestAnimationFrame(loop);
+  }
+
+  window.addEventListener('blur', () => {
+    if (game.mode === 'playing') setMode('paused');
+  });
+
+  loadAssets();
+  updateOverlay();
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
