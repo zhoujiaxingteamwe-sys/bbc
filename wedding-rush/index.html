@@ -534,14 +534,19 @@ canvas {
 
   function loadAssets() {
     const entries = Object.entries({ ...manifest, ...ceremonyManifest });
-    let done = 0;
+    const progress = Object.fromEntries(entries.map(([name]) => [name, 0]));
     game.loadProgress = 0;
     updateOverlay();
 
-    Promise.all(entries.map(([name, src]) => loadImage(name, src).then(() => {
-      done += 1;
-      game.loadProgress = done / entries.length;
+    const onProgress = (name, value) => {
+      progress[name] = Math.max(progress[name] || 0, value);
+      const total = Object.values(progress).reduce((sum, item) => sum + item, 0);
+      game.loadProgress = total / entries.length;
       updateOverlay();
+    };
+
+    Promise.all(entries.map(([name, src]) => loadImage(name, src, value => onProgress(name, value)).then(() => {
+      onProgress(name, 1);
     }))).then(() => {
       game.ceremonyAssetsStarted = true;
       game.ceremonyAssetsReady = true;
@@ -550,23 +555,59 @@ canvas {
     });
   }
 
-  function loadImage(name, src) {
+  function loadImage(name, src, onProgress) {
     if (!src) return Promise.resolve(null);
-    if (images[name] !== undefined) return Promise.resolve(images[name]);
-    if (game.assetPromises[name]) return game.assetPromises[name];
-    game.assetPromises[name] = new Promise(resolve => {
+    if (images[name] !== undefined) {
+      onProgress?.(1);
+      return Promise.resolve(images[name]);
+    }
+    if (game.assetPromises[name]) return game.assetPromises[name].then(image => {
+      onProgress?.(1);
+      return image;
+    });
+
+    const decodeImage = blob => new Promise(resolve => {
       const image = new Image();
+      const url = URL.createObjectURL(blob);
       image.onload = () => {
+        URL.revokeObjectURL(url);
         images[name] = image;
+        onProgress?.(1);
         resolve(image);
       };
       image.onerror = () => {
-        console.warn('素材加载失败:', src);
+        URL.revokeObjectURL(url);
+        console.warn('素材解码失败:', src);
         images[name] = null;
+        onProgress?.(1);
         resolve(null);
       };
-      image.src = src;
+      image.src = url;
     });
+
+    game.assetPromises[name] = fetch(src)
+      .then(response => {
+        if (!response.ok) throw new Error(`${response.status} ${src}`);
+        const total = Number(response.headers.get('content-length')) || 0;
+        if (!response.body || !total) return response.blob();
+        const reader = response.body.getReader();
+        const chunks = [];
+        let received = 0;
+        return reader.read().then(function pump(result) {
+          if (result.done) return new Blob(chunks);
+          chunks.push(result.value);
+          received += result.value.length;
+          onProgress?.(Math.min(.98, received / total));
+          return reader.read().then(pump);
+        });
+      })
+      .then(decodeImage)
+      .catch(error => {
+        console.warn('素材加载失败:', src, error);
+        images[name] = null;
+        onProgress?.(1);
+        return null;
+      });
     return game.assetPromises[name];
   }
 
