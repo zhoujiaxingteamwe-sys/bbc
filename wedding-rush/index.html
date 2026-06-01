@@ -119,6 +119,24 @@ canvas {
   box-shadow: none;
 }
 .game-btn:active { transform: translateY(1px) scale(.98); }
+.chapter-list {
+  margin-top: 18px;
+  display: grid;
+  gap: 10px;
+}
+.chapter-card {
+  width: 100%;
+  border: 1px solid rgba(255,255,255,.18);
+  border-radius: 18px;
+  padding: 14px 16px;
+  text-align: left;
+  color: #fff;
+  background: rgba(255,255,255,.1);
+  cursor: pointer;
+}
+.chapter-card strong { display: block; color: var(--gold); font-size: 16px; }
+.chapter-card span { display: block; margin-top: 5px; color: var(--muted); font-size: 13px; line-height: 1.45; }
+.chapter-card.locked { cursor: default; opacity: .62; }
 .tips {
   margin-top: 16px;
   display: grid;
@@ -212,10 +230,24 @@ canvas {
   const GRAVITY = 2200;
   const JUMP_V = -820;
   const RUN_SPEED = 220;
-  const LEVEL_END_X = 5250;
-  const BOSS_X = 3900;
-  const TIME_LIMIT = 180;
+  const WEDDING_END_X = 5250;
+  const WEDDING_BOSS_X = 3900;
+  const CHAPTER1_END_X = 7600;
+  const CHAPTER2_END_X = 8400;
   const DEBUG_HITBOXES = false;
+  const WEDDING_CEREMONY_FRAME_DURATION = 1.05;
+  const WEDDING_CEREMONY_DURATION = WEDDING_CEREMONY_FRAME_DURATION * 8 + .8;
+  const WEDDING_CEREMONY_KEYS = ['ceremony01', 'ceremony02', 'ceremony03', 'ceremony04', 'ceremony05', 'ceremony06', 'ceremony07', 'ceremony08'];
+  const WEDDING_CEREMONY_CAPTIONS = [
+    '新郎穿过红毯，终于来到新娘面前。',
+    '美泉宫前的花门下，婚礼正式开始。',
+    '他们相望一笑，把一路奔赴变成今天。',
+    '新娘捧着花，轻轻回应这份等待。',
+    '双手相牵，所有关卡都有了答案。',
+    '交换戒指，把余生的约定戴在指尖。',
+    '花瓣和烟火落下，掌声为他们亮起。',
+    '从相识到婚礼，故事走进新的篇章。'
+  ];
 
   ctx.imageSmoothingEnabled = false;
 
@@ -232,7 +264,15 @@ canvas {
     roadblock: 'assets/roadblock.png',
     weddingCar: 'assets/wedding_car.png',
     weddingArch: 'assets/wedding_arch.png',
-    hudBar: 'assets/hud_bar.png'
+    hudBar: 'assets/hud_bar.png',
+    ceremony01: 'assets/ceremony_01.png',
+    ceremony02: 'assets/ceremony_02.png',
+    ceremony03: 'assets/ceremony_03.png',
+    ceremony04: 'assets/ceremony_04.png',
+    ceremony05: 'assets/ceremony_05.png',
+    ceremony06: 'assets/ceremony_06.png',
+    ceremony07: 'assets/ceremony_07.png',
+    ceremony08: 'assets/ceremony_08.png'
   };
 
   const images = {};
@@ -291,7 +331,61 @@ canvas {
     }
   };
 
-  const levelEvents = [
+  const chapter1Events = [
+    { at: 260, type: 'story', text: '【校园体育场】午后的风掠过跑道，也把相遇吹向你们。' },
+    { at: 620, type: 'pickup', item: 'memory', y: GROUND_Y - 136 },
+    { at: 980, type: 'softObstacle', label: '赶课人群', w: 38, h: 82, y: GROUND_Y - 82 },
+    { at: 1350, type: 'pickup', item: 'heart', y: GROUND_Y - 178 },
+    { at: 1680, type: 'story', text: '那时谁也没有说破，只是把心动藏进傍晚的光里。' },
+
+    { at: 2180, type: 'story', text: '【大学食堂】人声和饭香之间，你们第一次坐进彼此的青春。' },
+    { at: 2500, type: 'pickup', item: 'memory', y: GROUND_Y - 140 },
+    { at: 2860, type: 'softObstacle', label: '排队队伍', w: 36, h: 76, y: GROUND_Y - 76 },
+    { at: 3250, type: 'pickup', item: 'rose', y: GROUND_Y - 168 },
+    { at: 3600, type: 'story', text: '聊着聊着，青岛的海被端上了饭桌：想去看海的话，我陪你。' },
+
+    { at: 4150, type: 'story', text: '【青岛海边】后来海浪替你们记住了，那些没说出口的温柔。' },
+    { at: 4500, type: 'pickup', item: 'memory', y: GROUND_Y - 132 },
+    { at: 4890, type: 'softObstacle', label: '海边行李箱', w: 34, h: 64, y: GROUND_Y - 64 },
+    { at: 5300, type: 'pickup', item: 'heart', y: GROUND_Y - 184 },
+    { at: 5650, type: 'story', text: '海风吹过耳边，新郎轻声说：我要毕业了。' },
+
+    { at: 6250, type: 'story', text: '【毕业季校园】凤凰花开的时候，有人启程，有人仍留在校园。' },
+    { at: 6560, type: 'pickup', item: 'memory', y: GROUND_Y - 138 },
+    { at: 6920, type: 'softObstacle', label: '毕业人群', w: 38, h: 82, y: GROUND_Y - 82 },
+    { at: 7240, type: 'pickup', item: 'memory', y: GROUND_Y - 174 },
+    { at: CHAPTER1_END_X, type: 'goal' }
+  ];
+
+  const chapter2Events = [
+    { at: 300, type: 'story', text: '【上海迪士尼】烟花还没升起，甜蜜已经先亮了起来。' },
+    { at: 720, type: 'pickup', item: 'zootopiaBadge', y: GROUND_Y - 156 },
+    { at: 1120, type: 'softObstacle', label: '排队人潮', w: 40, h: 80, y: GROUND_Y - 80 },
+    { at: 1500, type: 'pickup', item: 'stellalouDoll', y: GROUND_Y - 178 },
+    { at: 1900, type: 'story', text: '疯狂动物城的徽章和星黛露玩偶，把童话装进口袋。' },
+
+    { at: 2380, type: 'story', text: '【环球影城】穿过魔法街巷，哈利波特的风把笑声吹得很近。' },
+    { at: 2740, type: 'pickup', item: 'harryMagnet', y: GROUND_Y - 160 },
+    { at: 3140, type: 'softObstacle', label: '魔法人群', w: 42, h: 84, y: GROUND_Y - 84 },
+    { at: 3460, type: 'pickup', item: 'onePieceMagnet', y: GROUND_Y - 142 },
+    { at: 3820, type: 'softObstacle', label: '山治', w: 40, h: 88, y: GROUND_Y - 88, motion: 'bounce' },
+    { at: 4080, type: 'story', text: '哈利波特和海贼王的冰箱贴，也贴住了那天的快乐。' },
+
+    { at: 4420, type: 'story', text: '【香港维多利亚港】夜色落在海面，也落在她挑中的发财款哈奇猫上。' },
+    { at: 4800, type: 'pickup', item: 'luckyCat', y: GROUND_Y - 146 },
+    { at: 5200, type: 'softObstacle', label: '港湾人潮', w: 40, h: 78, y: GROUND_Y - 78 },
+    { at: 5580, type: 'pickup', item: 'heart', y: GROUND_Y - 180 },
+    { at: 5960, type: 'story', text: '那只发财款哈奇猫，被你们买成了认真喜欢的证据。' },
+
+    { at: 6460, type: 'story', text: '【澳门大三巴】石阶前的风很慢，挂件轻轻晃着新的答案。' },
+    { at: 6820, type: 'pickup', item: 'catCharm', y: GROUND_Y - 142 },
+    { at: 7220, type: 'softObstacle', label: '石阶游客', w: 40, h: 80, y: GROUND_Y - 80 },
+    { at: 7560, type: 'pickup', item: 'rose', y: GROUND_Y - 168 },
+    { at: 7900, type: 'story', text: '走过这么多地方，她终于把喜欢说成了答应。' },
+    { at: CHAPTER2_END_X, type: 'goal' }
+  ];
+
+  const weddingEvents = [
     { at: 520, type: 'roadblock' },
     { at: 760, type: 'redPacket' },
     { at: 1010, type: 'pickup', item: 'redPacket' },
@@ -304,21 +398,100 @@ canvas {
     { at: 2860, type: 'pickup', item: 'memory' },
     { at: 3140, type: 'redPacket' },
     { at: 3420, type: 'balloon' },
-    { at: BOSS_X, type: 'boss' },
+    { at: WEDDING_BOSS_X, type: 'boss' },
     { at: 4550, type: 'pickup', item: 'heart' },
     { at: 4950, type: 'roadblock' },
-    { at: LEVEL_END_X, type: 'goal' }
+    { at: WEDDING_END_X, type: 'goal' }
   ];
+
+  const chapters = {
+    chapter1: {
+      id: 'chapter1',
+      order: 1,
+      title: '第一章：相识',
+      shortTitle: '相识',
+      subtitle: '大学食堂第一次见面',
+      description: '从操场风里走向食堂初见，再陪她去青岛看海，最后在毕业季校园告别。',
+      playable: true,
+      timeLimit: 210,
+      endX: CHAPTER1_END_X,
+      events: chapter1Events,
+      countLabel: '碎片',
+      timerLabel: '回忆倒计时',
+      actionLabel: '走向毕业季',
+      completeTitle: '第一章完成',
+      completeTagline: '食堂的初见、青岛的海风、毕业季的告别，都成了最温柔的开始。',
+      gameOverMessage: '回忆倒计时结束了。',
+      goalKind: 'farewell',
+      hasBoss: false
+    },
+    chapter2: {
+      id: 'chapter2',
+      order: 2,
+      title: '第二章：相恋',
+      shortTitle: '相恋',
+      subtitle: '旅行约会',
+      description: '从上海迪士尼到环球影城，再到香港维港和澳门大三巴，收集徽章、玩偶、冰箱贴和哈奇猫周边。',
+      playable: true,
+      timeLimit: 220,
+      endX: CHAPTER2_END_X,
+      events: chapter2Events,
+      countLabel: '周边',
+      timerLabel: '约会倒计时',
+      actionLabel: '开始约会',
+      completeTitle: '第二章完成',
+      completeTagline: '徽章、玩偶、冰箱贴和哈奇猫周边，终于把喜欢走成了在一起。',
+      gameOverMessage: '约会的脚步暂时慢了下来。',
+      goalKind: 'love',
+      hasBoss: false
+    },
+    chapter3: {
+      id: 'chapter3',
+      order: 3,
+      title: '第三章：订婚',
+      shortTitle: '订婚',
+      subtitle: '待制作',
+      description: '这一章等你继续定制剧情。',
+      playable: false
+    },
+    wedding: {
+      id: 'wedding',
+      order: 4,
+      title: '第四章：迎亲结婚',
+      shortTitle: '迎亲结婚',
+      subtitle: '婚礼倒计时',
+      description: '穿过婚礼大道，击败堵车怪，准时抵达花门。',
+      playable: true,
+      timeLimit: 180,
+      endX: WEDDING_END_X,
+      bossX: WEDDING_BOSS_X,
+      events: weddingEvents,
+      countLabel: '红包',
+      timerLabel: '婚礼倒计时',
+      actionLabel: '开始迎亲',
+      completeTitle: '婚礼准时开始！',
+      completeTagline: '新郎成功抵达，新娘正在花门前等待。',
+      gameOverMessage: '婚礼倒计时结束了。',
+      goalKind: 'wedding',
+      hasBoss: true
+    }
+  };
+
+  const chapterOrder = ['chapter1', 'chapter2', 'chapter3', 'wedding'];
 
   const game = {
     mode: 'loading',
     loadProgress: 0,
     lastTime: 0,
+    currentChapterId: 'chapter1',
     cameraX: 0,
     score: 0,
     redPackets: 0,
-    timeLeft: TIME_LIMIT,
+    memoryFragments: 0,
+    timeLeft: chapters.chapter1.timeLimit,
     eventIndex: 0,
+    storyText: '',
+    storyTimer: 0,
     entities: [],
     bullets: [],
     particles: [],
@@ -349,6 +522,9 @@ canvas {
   function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
   function choose(arr, t, fps = 8) { return arr[Math.floor(t * fps) % arr.length]; }
   function img(name) { return images[name]; }
+  function currentChapter() { return chapters[game.currentChapterId] || chapters.chapter1; }
+  function isChapterOne() { return currentChapter().id === 'chapter1'; }
+  function isChapterTwo() { return currentChapter().id === 'chapter2'; }
 
   function loadAssets() {
     const entries = Object.entries(manifest);
@@ -375,12 +551,17 @@ canvas {
     });
   }
 
-  function resetGame() {
+  function resetGame(chapterId = game.currentChapterId) {
+    game.currentChapterId = chapters[chapterId]?.playable ? chapterId : 'chapter1';
+    const chapter = currentChapter();
     game.cameraX = 0;
     game.score = 0;
     game.redPackets = 0;
-    game.timeLeft = TIME_LIMIT;
+    game.memoryFragments = 0;
+    game.timeLeft = chapter.timeLimit;
     game.eventIndex = 0;
+    game.storyText = '';
+    game.storyTimer = 0;
     game.entities = [];
     game.bullets = [];
     game.particles = [];
@@ -401,8 +582,8 @@ canvas {
     player.state = 'run';
   }
 
-  function startGame() {
-    resetGame();
+  function startGame(chapterId = game.currentChapterId) {
+    resetGame(chapterId);
     game.mode = 'playing';
     updateOverlay();
   }
@@ -410,6 +591,28 @@ canvas {
   function setMode(mode) {
     game.mode = mode;
     updateOverlay();
+  }
+
+  function showStory(text) {
+    game.storyText = text;
+    game.storyTimer = 5.2;
+  }
+
+  function chapterCollectCount() {
+    return isChapterOne() || isChapterTwo() ? game.memoryFragments : game.redPackets;
+  }
+
+  function chapterCardsHtml() {
+    return chapterOrder.map(id => {
+      const chapter = chapters[id];
+      const action = chapter.playable ? 'start-chapter' : 'coming-soon';
+      const locked = chapter.playable ? '' : ' locked';
+      const status = chapter.playable ? chapter.subtitle : '待制作';
+      return `<button class="chapter-card${locked}" data-action="${action}" data-chapter="${id}">
+        <strong>${chapter.title} · ${status}</strong>
+        <span>${chapter.description}</span>
+      </button>`;
+    }).join('');
   }
 
   function updateOverlay() {
@@ -430,11 +633,12 @@ canvas {
       overlay.classList.add('show');
       overlay.innerHTML = `
         <div class="menu-card">
-          <h1>新郎冲冲冲<br>婚礼倒计时</h1>
-          <div class="tagline">180 秒内穿过婚礼大道，准时抵达花门！</div>
-          <p>跳过路障，撒喜糖击败红包怪和堵车怪，收集红包与戒指，最后冲到婚车和新娘身边。</p>
+          <h1>我们的故事<br>从相识到婚礼</h1>
+          <div class="tagline">四个章节：相识、相恋、订婚、迎亲结婚。</div>
+          <p>先回到那年校园：食堂的初见、青岛的海风、毕业季的告别，会一点点铺成婚礼前的来路。</p>
           <div class="button-row">
-            <button class="game-btn" data-action="start">开始迎亲</button>
+            <button class="game-btn" data-action="start-chapter" data-chapter="chapter1">从相识开始</button>
+            <button class="game-btn secondary" data-action="chapter-select">选择章节</button>
             <button class="game-btn secondary" data-action="help">操作说明</button>
           </div>
           <div class="tips">
@@ -445,30 +649,56 @@ canvas {
       return;
     }
 
-    if (game.mode === 'paused') {
+    if (game.mode === 'chapterSelect') {
       overlay.classList.add('show');
       overlay.innerHTML = `
         <div class="menu-card">
-          <h1>婚礼暂停中</h1>
-          <div class="tagline">新郎整理一下领结。</div>
-          <p>当前分数：${game.score}　红包：${game.redPackets}</p>
+          <h1>选择章节</h1>
+          <div class="tagline">把来时的每一步，都慢慢走成今天。</div>
+          <div class="chapter-list">${chapterCardsHtml()}</div>
+          <div class="button-row">
+            <button class="game-btn secondary" data-action="menu">返回封面</button>
+          </div>
+        </div>`;
+      return;
+    }
+
+    if (game.mode === 'paused') {
+      const chapter = currentChapter();
+      overlay.classList.add('show');
+      overlay.innerHTML = `
+        <div class="menu-card">
+          <h1>${chapter.shortTitle}暂停中</h1>
+          <div class="tagline">新郎整理一下心情。</div>
+          <p>当前分数：${game.score}　${chapter.countLabel}：${chapterCollectCount()}</p>
           <div class="button-row">
             <button class="game-btn" data-action="resume">继续奔赴</button>
             <button class="game-btn secondary" data-action="restart">重新开始</button>
+            <button class="game-btn secondary" data-action="chapter-select">选择章节</button>
           </div>
         </div>`;
       return;
     }
 
     if (game.mode === 'win') {
+      const chapter = currentChapter();
+      const nextHint = chapter.id === 'chapter1'
+        ? '<p>第二章「相恋」已经开启，可以继续去旅行约会。</p>'
+        : (chapter.id === 'chapter2' ? '<p>第三章「订婚」还在准备中，你可以先体验最终章「迎亲结婚」。</p>' : '');
+      const ceremonyHint = chapter.id === 'wedding' ? '<p>结尾已经播放了 8 帧婚礼仪式动画：进场、牵手、交换戒指，到最终合影。</p>' : '';
       overlay.classList.add('show');
       overlay.innerHTML = `
         <div class="menu-card">
-          <h1>婚礼准时开始！</h1>
-          <div class="tagline">新郎成功抵达，新娘正在花门前等待。</div>
-          <p>最终分数：${game.score}　红包：${game.redPackets}　剩余时间：${Math.ceil(game.timeLeft)} 秒</p>
+          <h1>${chapter.completeTitle}</h1>
+          <div class="tagline">${chapter.completeTagline}</div>
+          <p>最终分数：${game.score}　${chapter.countLabel}：${chapterCollectCount()}　剩余时间：${Math.ceil(game.timeLeft)} 秒</p>
+          ${nextHint}
+          ${ceremonyHint}
           <div class="button-row">
-            <button class="game-btn" data-action="restart">再冲一次</button>
+            <button class="game-btn" data-action="restart">再玩本章</button>
+            ${chapter.id === 'chapter1' ? '<button class="game-btn secondary" data-action="start-chapter" data-chapter="chapter2">继续第二章</button>' : ''}
+            ${chapter.id === 'chapter2' ? '<button class="game-btn secondary" data-action="start-chapter" data-chapter="wedding">先体验最终章</button>' : ''}
+            <button class="game-btn secondary" data-action="chapter-select">选择章节</button>
             <button class="game-btn secondary" data-action="menu">返回封面</button>
           </div>
         </div>`;
@@ -476,14 +706,16 @@ canvas {
     }
 
     if (game.mode === 'gameOver') {
+      const chapter = currentChapter();
       overlay.classList.add('show');
       overlay.innerHTML = `
         <div class="menu-card">
-          <h1>婚礼迟到了！</h1>
-          <div class="tagline">${game.message || '新郎被婚礼闹关拦住了。'}</div>
-          <p>本次分数：${game.score}　红包：${game.redPackets}</p>
+          <h1>${chapter.shortTitle}暂时停下了</h1>
+          <div class="tagline">${game.message || chapter.gameOverMessage}</div>
+          <p>本次分数：${game.score}　${chapter.countLabel}：${chapterCollectCount()}</p>
           <div class="button-row">
-            <button class="game-btn" data-action="restart">重新迎亲</button>
+            <button class="game-btn" data-action="restart">重新开始</button>
+            <button class="game-btn secondary" data-action="chapter-select">选择章节</button>
             <button class="game-btn secondary" data-action="menu">返回封面</button>
           </div>
         </div>`;
@@ -498,11 +730,17 @@ canvas {
     const button = event.target.closest('[data-action]');
     if (!button) return;
     const action = button.dataset.action;
-    if (action === 'start' || action === 'restart') startGame();
+    if (action === 'start' || action === 'restart') startGame(game.currentChapterId);
+    if (action === 'start-chapter') startGame(button.dataset.chapter || 'chapter1');
+    if (action === 'chapter-select') setMode('chapterSelect');
+    if (action === 'coming-soon') {
+      const chapter = chapters[button.dataset.chapter];
+      if (chapter) button.querySelector('span').textContent = `${chapter.title}正在准备中，等你继续定制剧情。`;
+    }
     if (action === 'resume') setMode('playing');
     if (action === 'menu') setMode('menu');
     if (action === 'help') {
-      overlay.querySelector('.tips')?.insertAdjacentHTML('beforeend', '<span>小技巧：Boss 出现后会挡路，多撒几颗喜糖就能让婚车通行。</span>');
+      overlay.querySelector('.tips')?.insertAdjacentHTML('beforeend', '<span>小技巧：第一章收集回忆碎片，最终章 Boss 出现后多撒几颗喜糖就能让婚车通行。</span>');
     }
   });
 
@@ -510,7 +748,7 @@ canvas {
     const code = event.code;
     keys[code] = true;
     if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(code)) event.preventDefault();
-    if (code === 'Enter' && ['menu', 'win', 'gameOver'].includes(game.mode)) startGame();
+    if (code === 'Enter' && ['menu', 'win', 'gameOver'].includes(game.mode)) startGame(game.currentChapterId);
     if (code === 'KeyP' && game.mode === 'playing') setMode('paused');
     else if (code === 'KeyP' && game.mode === 'paused') setMode('playing');
   }, { passive: false });
@@ -540,10 +778,21 @@ canvas {
   function update(dt) {
     if (game.mode !== 'playing') return;
 
+    const chapter = currentChapter();
+    if (game.ceremony) {
+      game.storyTimer = Math.max(0, game.storyTimer - dt);
+      player.animTime += dt;
+      game.screenShake = Math.max(0, game.screenShake - dt * 28);
+      updateParticles(dt);
+      updateCeremony(dt);
+      return;
+    }
+
     game.timeLeft -= dt;
+    game.storyTimer = Math.max(0, game.storyTimer - dt);
     if (game.timeLeft <= 0) {
       game.timeLeft = 0;
-      game.message = '婚礼倒计时结束了。';
+      game.message = chapter.gameOverMessage;
       setMode('gameOver');
       return;
     }
@@ -573,10 +822,10 @@ canvas {
       player.grounded = false;
     }
 
-    const nearBossGate = game.boss && !game.boss.defeated && game.cameraX > BOSS_X - 720;
+    const nearBossGate = chapter.hasBoss && game.boss && !game.boss.defeated && game.cameraX > chapter.bossX - 720;
     let scrollSpeed = RUN_SPEED + (moveRight ? 80 : 0) - (moveLeft ? 24 : 0);
     if (nearBossGate) scrollSpeed = Math.min(scrollSpeed, 38);
-    game.cameraX = Math.min(LEVEL_END_X - 260, game.cameraX + scrollSpeed * dt);
+    game.cameraX = Math.min(chapter.endX - 260, game.cameraX + scrollSpeed * dt);
 
     spawnEvents();
     updateEntities(dt);
@@ -584,7 +833,8 @@ canvas {
     updateParticles(dt);
     handleCollisions();
 
-    if (game.boss && game.boss.defeated && !game.goal) spawnGoal();
+    if (!chapter.hasBoss && !game.goal && game.eventIndex >= chapter.events.length) spawnGoal();
+    if (chapter.hasBoss && game.boss && game.boss.defeated && !game.goal) spawnGoal();
     if (game.goal && !game.ceremony && playerWorldX() > game.goal.worldX - 260) startCeremony();
     updateCeremony(dt);
   }
@@ -617,18 +867,41 @@ canvas {
   }
 
   function spawnEvents() {
-    while (game.eventIndex < levelEvents.length && levelEvents[game.eventIndex].at < game.cameraX + W + 260) {
-      const event = levelEvents[game.eventIndex++];
+    const chapter = currentChapter();
+    while (game.eventIndex < chapter.events.length) {
+      const event = chapter.events[game.eventIndex];
+      const triggerDistance = event.type === 'story' ? 260 : W + 260;
+      if (event.at >= game.cameraX + triggerDistance) break;
+      game.eventIndex += 1;
       if (event.type === 'roadblock') spawnRoadblock(event.at);
+      if (event.type === 'softObstacle') spawnSoftObstacle(event.at, event);
       if (event.type === 'redPacket') spawnRedPacket(event.at);
       if (event.type === 'balloon') spawnBalloon(event.at);
-      if (event.type === 'pickup') spawnPickup(event.at, event.item);
+      if (event.type === 'pickup') spawnPickup(event.at, event.item, event.y);
       if (event.type === 'boss') spawnBoss(event.at);
+      if (event.type === 'story') showStory(event.text);
     }
   }
 
   function spawnRoadblock(worldX) {
-    game.entities.push({ type: 'roadblock', worldX, y: GROUND_Y - 78, w: 78, h: 78, hit: false });
+    game.entities.push({ type: 'roadblock', worldX, y: GROUND_Y - 64, w: 46, h: 64, hit: false });
+  }
+
+  function spawnSoftObstacle(worldX, event = {}) {
+    const w = event.w || 38;
+    const h = event.h || 78;
+    game.entities.push({
+      type: 'softObstacle',
+      label: event.label || '人群',
+      worldX,
+      y: event.y ?? GROUND_Y - h,
+      baseY: event.y ?? GROUND_Y - h,
+      w,
+      h,
+      motion: event.motion,
+      animTime: 0,
+      hit: false
+    });
   }
 
   function spawnRedPacket(worldX, y = GROUND_Y - 82) {
@@ -639,8 +912,9 @@ canvas {
     game.entities.push({ type: 'balloon', worldX, baseY: GROUND_Y - 238, y: GROUND_Y - 238, w: 76, h: 96, hp: 1, vx: -18, animTime: 0 });
   }
 
-  function spawnPickup(worldX, item) {
-    game.entities.push({ type: 'pickup', item, worldX, y: item === 'heart' || item === 'ring' ? GROUND_Y - 170 : GROUND_Y - 122, w: 52, h: 52, animTime: 0 });
+  function spawnPickup(worldX, item, y) {
+    const defaultY = item === 'heart' || item === 'ring' ? GROUND_Y - 170 : GROUND_Y - 122;
+    game.entities.push({ type: 'pickup', item, worldX, y: y ?? defaultY, w: 52, h: 52, animTime: 0 });
   }
 
   function spawnBoss(worldX) {
@@ -649,20 +923,23 @@ canvas {
   }
 
   function spawnGoal() {
-    game.goal = { worldX: LEVEL_END_X, y: GROUND_Y - 250, w: 260, h: 250 };
+    const chapter = currentChapter();
+    game.goal = { worldX: chapter.endX, y: GROUND_Y - 250, w: 260, h: 250 };
   }
 
   function startCeremony() {
-    const cameraTarget = LEVEL_END_X - 690;
+    const chapter = currentChapter();
+    const cameraTarget = chapter.endX - 690;
     game.cameraX = cameraTarget;
     game.entities = [];
     game.bullets = [];
     game.ceremony = {
       time: 0,
       cameraTarget,
+      kind: chapter.goalKind,
       groomStartX: player.x,
-      groomTargetX: 560,
-      brideX: 650,
+      groomTargetX: chapter.goalKind === 'farewell' ? 500 : (chapter.goalKind === 'love' ? 510 : 560),
+      brideX: chapter.goalKind === 'farewell' ? 675 : (chapter.goalKind === 'love' ? 660 : 650),
       finished: false
     };
     player.vx = 0;
@@ -670,7 +947,7 @@ canvas {
     player.y = GROUND_Y - player.h;
     player.grounded = true;
     player.invuln = 0;
-    addFloatText(462, 344, '抵达花门！', '#ffd36a');
+    addFloatText(462, 344, chapter.goalKind === 'farewell' ? '回到校园！' : (chapter.goalKind === 'love' ? '等到答案！' : '抵达花门！'), '#ffd36a');
   }
 
   function updateCeremony(dt) {
@@ -682,6 +959,19 @@ canvas {
     player.grounded = true;
     player.vy = 0;
 
+    if (c.kind === 'wedding') {
+      player.x = c.groomTargetX;
+      if (!c.finished && c.time > WEDDING_CEREMONY_FRAME_DURATION * 4) {
+        c.finished = true;
+        game.score += Math.ceil(game.timeLeft) * 10;
+        burstConfetti(640, 330, 150);
+        addFloatText(520, 318, '婚礼开始！', '#ffd36a');
+      }
+      if (Math.random() < dt * 24) sparkle(640 + (Math.random() - .5) * 520, 240 + Math.random() * 220, '#ffd36a');
+      if (c.time > WEDDING_CEREMONY_DURATION) setMode('win');
+      return;
+    }
+
     if (c.time < 2.2) {
       const t = Math.min(1, c.time / 2.2);
       player.x = c.groomStartX + (c.groomTargetX - c.groomStartX) * easeOutCubic(t);
@@ -691,10 +981,10 @@ canvas {
       if (!c.finished) {
         c.finished = true;
         game.score += Math.ceil(game.timeLeft) * 10;
-        burstConfetti(640, 330, 140);
-        addFloatText(520, 318, '迎娶成功！', '#ffd36a');
+        burstConfetti(640, 330, 90);
+        addFloatText(520, 318, c.kind === 'farewell' ? '相识完成！' : '确定恋爱！', '#ffd36a');
       }
-      if (c.time > 4.7) setMode('win');
+      if (c.time > (c.kind === 'farewell' ? 5.8 : 5.6)) setMode('win');
     }
   }
 
@@ -707,6 +997,11 @@ canvas {
       entity.animTime = (entity.animTime || 0) + dt;
       if (entity.vx) entity.worldX += entity.vx * dt;
       if (entity.type === 'balloon') entity.y = entity.baseY + Math.sin(entity.animTime * 3.3) * 18;
+      if (entity.type === 'softObstacle') {
+        const amp = entity.motion === 'bounce' ? 24 : 3;
+        const freq = entity.motion === 'bounce' ? 8 : 3;
+        entity.y = entity.baseY - Math.abs(Math.sin(entity.animTime * freq)) * amp;
+      }
       if (entity.type === 'pickup') entity.y += Math.sin(entity.animTime * 5) * dt * 14;
       entity.hitTimer = Math.max(0, (entity.hitTimer || 0) - dt);
     }
@@ -789,8 +1084,11 @@ canvas {
       if (entity.type === 'pickup' && hit(ph, entityHitbox(entity))) {
         collectPickup(entity);
         entity.dead = true;
-      } else if (['redPacket', 'balloon', 'roadblock'].includes(entity.type) && hit(ph, entityHitbox(entity))) {
-        damagePlayer(entity.type === 'roadblock' ? '撞到婚礼路障了。' : '被闹关小怪拦住了。');
+      } else if (['redPacket', 'balloon', 'roadblock', 'softObstacle'].includes(entity.type) && hit(ph, entityHitbox(entity))) {
+        const message = entity.type === 'softObstacle'
+          ? `被${entity.label}轻轻拦了一下。`
+          : (entity.type === 'roadblock' ? '撞到婚礼路障了。' : '被闹关小怪拦住了。');
+        damagePlayer(message);
       }
     }
 
@@ -805,10 +1103,27 @@ canvas {
     } else if (entity.item === 'ring' || entity.item === 'heart') {
       player.hearts = Math.min(player.maxHearts, player.hearts + 1);
       game.score += 80;
-      addFloatText(entity.worldX - game.cameraX, entity.y, '心动+1', '#ff75a8');
+      addFloatText(entity.worldX - game.cameraX, entity.y, isChapterOne() ? '心动+1' : '心动+1', '#ff75a8');
     } else if (entity.item === 'memory') {
+      game.memoryFragments += 1;
       game.score += 220;
-      addFloatText(entity.worldX - game.cameraX, entity.y, '回忆+220', '#9df7ff');
+      addFloatText(entity.worldX - game.cameraX, entity.y, isChapterTwo() ? '旅行票根+1' : '碎片+1', '#9df7ff');
+    } else if (entity.item === 'rose') {
+      game.memoryFragments += 1;
+      game.score += 160;
+      addFloatText(entity.worldX - game.cameraX, entity.y, isChapterTwo() ? '甜蜜+1' : '回忆+1', '#ffb3c8');
+    } else if (['zootopiaBadge', 'stellalouDoll', 'harryMagnet', 'onePieceMagnet', 'luckyCat', 'catCharm'].includes(entity.item)) {
+      const labels = {
+        zootopiaBadge: '疯狂动物城徽章+1',
+        stellalouDoll: '星黛露玩偶+1',
+        harryMagnet: '哈利波特冰箱贴+1',
+        onePieceMagnet: '海贼王冰箱贴+1',
+        luckyCat: '发财款哈奇猫+1',
+        catCharm: '哈奇猫挂件+1'
+      };
+      game.memoryFragments += 1;
+      game.score += 260;
+      addFloatText(entity.worldX - game.cameraX, entity.y, labels[entity.item], '#ffd36a');
     }
     sparkle(entity.worldX - game.cameraX + 24, entity.y + 24, '#ffd36a');
   }
@@ -835,7 +1150,8 @@ canvas {
 
   function entityHitbox(entity) {
     const x = entity.worldX - game.cameraX;
-    if (entity.type === 'roadblock') return { x: x + 16, y: entity.y + 14, w: entity.w - 28, h: entity.h - 18 };
+    if (entity.type === 'roadblock') return { x: x + 14, y: entity.y + 18, w: Math.max(12, entity.w - 28), h: Math.max(28, entity.h - 26) };
+    if (entity.type === 'softObstacle') return { x: x + 22, y: entity.y + 24, w: Math.max(10, entity.w - 44), h: Math.max(30, entity.h - 32) };
     if (entity.type === 'pickup') return { x: x + 6, y: entity.y + 6, w: entity.w - 12, h: entity.h - 12 };
     return { x: x + entity.w * .18, y: entity.y + entity.h * .14, w: entity.w * .64, h: entity.h * .72 };
   }
@@ -884,7 +1200,7 @@ canvas {
       ctx.translate((Math.random() - .5) * game.screenShake, (Math.random() - .5) * game.screenShake);
     }
 
-    if (game.mode === 'menu' || game.mode === 'loading') {
+    if (game.mode === 'menu' || game.mode === 'loading' || game.mode === 'chapterSelect') {
       drawCover();
       drawVignette(.28);
     } else {
@@ -893,7 +1209,7 @@ canvas {
 
     ctx.restore();
 
-    if (game.mode === 'playing' || game.mode === 'paused') drawHud();
+    if ((game.mode === 'playing' || game.mode === 'paused') && !(game.ceremony && game.ceremony.kind === 'wedding')) drawHud();
   }
 
   function drawCover() {
@@ -908,13 +1224,20 @@ canvas {
   }
 
   function drawGameWorld() {
+    if (game.ceremony && game.ceremony.kind === 'wedding') {
+      drawWeddingCeremonyFrames(game.ceremony);
+      drawParticles();
+      return;
+    }
     drawScrollingBackground();
+    drawChapterBrideMoments();
     drawGoal();
     drawEntities();
     drawBoss();
     drawBullets();
     drawPlayer();
     drawParticles();
+    drawSceneLabel();
     if (DEBUG_HITBOXES) drawDebugHitboxes();
   }
 
@@ -928,6 +1251,15 @@ canvas {
   }
 
   function drawScrollingBackground() {
+    if (isChapterOne()) {
+      drawCampusBackground();
+      return;
+    }
+    if (isChapterTwo()) {
+      drawTravelBackground();
+      return;
+    }
+
     const bg = img('streetBg');
     if (!bg) {
       drawGradientSky();
@@ -941,6 +1273,372 @@ canvas {
     if (offset > 0) ctx.drawImage(bg, offset - W, 0, W, H);
     ctx.fillStyle = 'rgba(255, 244, 252, .05)';
     ctx.fillRect(0, 0, W, H);
+  }
+
+  function drawCampusBackground() {
+    const scene = currentSceneInfo();
+    if (scene.id === 'sports') drawSportsFieldScene(scene.localProgress);
+    else if (scene.id === 'cafeteria') drawCafeteriaScene(scene.localProgress);
+    else if (scene.id === 'qingdao') drawQingdaoScene(scene.localProgress);
+    else drawGraduationScene(scene.localProgress);
+
+    ctx.fillStyle = 'rgba(255,255,255,.08)';
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  function drawTravelBackground() {
+    const scene = currentSceneInfo();
+    if (scene.id === 'disney') drawDisneyScene(scene.localProgress);
+    else if (scene.id === 'universal') drawUniversalScene(scene.localProgress);
+    else if (scene.id === 'hongkong') drawHongKongScene(scene.localProgress);
+    else drawMacauScene(scene.localProgress);
+
+    ctx.fillStyle = 'rgba(255,255,255,.07)';
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  function currentSceneInfo() {
+    const progress = clamp(game.cameraX / currentChapter().endX, 0, 1);
+    const scenes = isChapterTwo() ? [
+      { id: 'disney', title: '上海迪士尼', desc: '烟火和城堡之间，约会像童话开场。', from: 0, to: .27 },
+      { id: 'universal', title: '环球影城', desc: '魔法街巷里，笑声离得很近。', from: .27, to: .52 },
+      { id: 'hongkong', title: '香港维多利亚港', desc: '夜色和海风，陪她挑中发财款哈奇猫。', from: .52, to: .77 },
+      { id: 'macau', title: '澳门大三巴', desc: '石阶前的挂件，轻轻晃出答案。', from: .77, to: 1 }
+    ] : [
+      { id: 'sports', title: '校园体育场', desc: '风越过跑道，青春刚好发光。', from: 0, to: .27 },
+      { id: 'cafeteria', title: '大学食堂', desc: '人声鼎沸里，第一眼很安静。', from: .27, to: .52 },
+      { id: 'qingdao', title: '青岛海边', desc: '海风很轻，离别被轻轻说起。', from: .52, to: .78 },
+      { id: 'graduation', title: '毕业季校园', desc: '一人启程，一人把青春继续写完。', from: .78, to: 1 }
+    ];
+    const scene = scenes.find(item => progress >= item.from && progress < item.to) || scenes[scenes.length - 1];
+    return { ...scene, localProgress: clamp((progress - scene.from) / (scene.to - scene.from), 0, 1) };
+  }
+
+  function drawSceneLabel() {
+    if (!isChapterOne() && !isChapterTwo()) return;
+    const scene = currentSceneInfo();
+    ctx.save();
+    ctx.fillStyle = 'rgba(36, 8, 28, .58)';
+    roundRect(28, 92, 320, 78, 22, true);
+    ctx.strokeStyle = 'rgba(255, 211, 106, .34)';
+    ctx.lineWidth = 2;
+    roundRect(28, 92, 320, 78, 22, false);
+    ctx.fillStyle = '#ffd36a';
+    ctx.font = '900 22px -apple-system, BlinkMacSystemFont, sans-serif';
+    ctx.fillText(scene.title, 52, 124);
+    ctx.fillStyle = 'rgba(255,247,249,.86)';
+    ctx.font = '700 15px -apple-system, BlinkMacSystemFont, sans-serif';
+    ctx.fillText(scene.desc, 52, 152);
+    ctx.restore();
+  }
+
+  function drawChapterBrideMoments() {
+    if ((!isChapterOne() && !isChapterTwo()) || game.ceremony) return;
+    const scene = currentSceneInfo();
+    const chapterOneMoments = {
+      sports: { x: 900, y: GROUND_Y - 178, scale: .86, set: frames.bride.idle, caption: '她也在这片校园里' },
+      cafeteria: { x: 760, y: GROUND_Y - 190, scale: .92, set: frames.bride.wave, caption: '人群里，第一眼很安静' },
+      qingdao: { x: 835, y: GROUND_Y - 180, scale: .9, set: frames.bride.wave, caption: '海风把她的笑吹得很轻' },
+      graduation: { x: 765, y: GROUND_Y - 190, scale: .92, set: frames.bride.idle, caption: '她还要继续留在校园' }
+    };
+    const chapterTwoMoments = {
+      disney: { x: 790, y: GROUND_Y - 190, scale: .92, set: frames.bride.happy, caption: '她站在灯火里，像童话的答案' },
+      universal: { x: 820, y: GROUND_Y - 188, scale: .9, set: frames.bride.wave, caption: '魔法街巷里，她笑得很近' },
+      hongkong: { x: 790, y: GROUND_Y - 190, scale: .92, set: frames.bride.happy, caption: '她挑中了发财款哈奇猫' },
+      macau: { x: 780, y: GROUND_Y - 190, scale: .92, set: frames.bride.wave, caption: '挂件轻晃，喜欢快要说出口' }
+    };
+    const moment = (isChapterTwo() ? chapterTwoMoments : chapterOneMoments)[scene.id];
+    if (!moment) return;
+    const x = moment.x - Math.sin(scene.localProgress * Math.PI) * 18;
+    const y = moment.y + Math.sin(performance.now() / 900) * 3;
+    const w = 100 * moment.scale;
+    const h = 156 * moment.scale;
+
+    ctx.save();
+    ctx.globalAlpha = .88;
+    ctx.fillStyle = 'rgba(255, 245, 252, .18)';
+    roundRect(x - 18, y + h - 16, w + 36, 16, 8, true);
+    const brideFrame = choose(moment.set, performance.now() / 1000, 4);
+    drawFrame('bride', brideFrame, x, y, w, h);
+    ctx.globalAlpha = .92;
+    ctx.fillStyle = 'rgba(36, 8, 28, .56)';
+    roundRect(x - 62, y - 36, 248, 30, 15, true);
+    ctx.fillStyle = '#fff7f9';
+    ctx.font = '700 14px -apple-system, BlinkMacSystemFont, sans-serif';
+    ctx.fillText(moment.caption, x - 48, y - 15);
+    ctx.restore();
+  }
+
+  function drawSportsFieldScene(t) {
+    drawSoftSky('#7fcfff', '#ffe3b7');
+    drawClouds(t, '#ffffff');
+    ctx.fillStyle = '#77bf5c';
+    ctx.fillRect(0, 390, W, 160);
+    ctx.fillStyle = '#d86e5a';
+    ctx.fillRect(0, 486, W, 126);
+    ctx.strokeStyle = 'rgba(255,255,255,.75)';
+    ctx.lineWidth = 5;
+    for (let y = 508; y < 600; y += 26) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(W, y + Math.sin(t * Math.PI) * 6);
+      ctx.stroke();
+    }
+    drawSchoolBuildings('#f5c48c', '#af6a55');
+    ctx.fillStyle = 'rgba(60, 36, 28, .12)';
+    ctx.fillRect(0, GROUND_Y, W, H - GROUND_Y);
+  }
+
+  function drawCafeteriaScene(t) {
+    drawSoftSky('#ffd9a8', '#fff1cf');
+    ctx.fillStyle = '#f1b46f';
+    ctx.fillRect(0, 260, W, 352);
+    ctx.fillStyle = '#e18e58';
+    ctx.fillRect(0, 360, W, 26);
+    for (let x = -120; x < W + 160; x += 210) {
+      ctx.fillStyle = 'rgba(255,255,255,.62)';
+      roundRect(x - (game.cameraX * .18) % 210, 296, 120, 88, 12, true);
+    }
+    ctx.fillStyle = '#8b4d36';
+    for (let x = 90; x < W; x += 310) {
+      roundRect(x, 505 + Math.sin(t * Math.PI) * 3, 150, 18, 9, true);
+      ctx.fillRect(x + 18, 523, 14, 64);
+      ctx.fillRect(x + 118, 523, 14, 64);
+    }
+    ctx.fillStyle = '#b87549';
+    ctx.fillRect(0, GROUND_Y, W, H - GROUND_Y);
+  }
+
+  function drawQingdaoScene(t) {
+    drawSoftSky('#6fc7ff', '#f5e2b8');
+    ctx.fillStyle = '#56b8d7';
+    ctx.fillRect(0, 392, W, 120);
+    ctx.strokeStyle = 'rgba(255,255,255,.66)';
+    ctx.lineWidth = 4;
+    for (let i = 0; i < 7; i++) {
+      const y = 414 + i * 16;
+      ctx.beginPath();
+      for (let x = -40; x <= W + 40; x += 40) {
+        const yy = y + Math.sin((x + game.cameraX * .2) / 80 + i + t) * 5;
+        if (x === -40) ctx.moveTo(x, yy);
+        else ctx.lineTo(x, yy);
+      }
+      ctx.stroke();
+    }
+    ctx.fillStyle = '#edd293';
+    ctx.fillRect(0, 512, W, 100);
+    ctx.fillStyle = '#d9b16c';
+    ctx.fillRect(0, GROUND_Y, W, H - GROUND_Y);
+    ctx.fillStyle = '#df6b61';
+    roundRect(930, 284, 48, 116, 12, true);
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(944, 304, 20, 10);
+    ctx.fillRect(944, 334, 20, 10);
+  }
+
+  function drawGraduationScene(t) {
+    drawSoftSky('#f7caa6', '#ffe8c8');
+    drawSchoolBuildings('#e9aa7a', '#93564b');
+    ctx.fillStyle = 'rgba(255,255,255,.24)';
+    for (let i = 0; i < 12; i++) {
+      const x = (i * 132 - game.cameraX * .22) % (W + 160) - 80;
+      ctx.fillRect(x, 210 + (i % 3) * 22, 34, 22);
+      ctx.fillRect(x + 8, 232 + (i % 3) * 22, 18, 58);
+    }
+    ctx.fillStyle = '#c9935f';
+    ctx.fillRect(0, 512, W, 100);
+    ctx.fillStyle = '#a96d4a';
+    ctx.fillRect(0, GROUND_Y, W, H - GROUND_Y);
+    ctx.fillStyle = 'rgba(255,255,255,.18)';
+    roundRect(470, 130 + Math.sin(t * Math.PI) * 4, 340, 56, 22, true);
+    ctx.fillStyle = '#fff7f9';
+    ctx.font = '900 26px -apple-system, BlinkMacSystemFont, sans-serif';
+    ctx.fillText('毕业季', 604, 166);
+  }
+
+  function drawDisneyScene(t) {
+    drawSoftSky('#7386ff', '#ffd5ed');
+    drawStars(t);
+    ctx.fillStyle = '#d9b7ff';
+    roundRect(494, 258, 292, 250, 28, true);
+    ctx.fillStyle = '#8f6bd8';
+    ctx.fillRect(532, 210, 56, 310);
+    ctx.fillRect(692, 210, 56, 310);
+    ctx.beginPath();
+    ctx.moveTo(560, 142); ctx.lineTo(604, 210); ctx.lineTo(516, 210); ctx.closePath(); ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(720, 142); ctx.lineTo(764, 210); ctx.lineTo(676, 210); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#ffe4a3';
+    roundRect(585, 330, 110, 190, 55, true);
+    ctx.fillStyle = '#f6c6d2';
+    ctx.fillRect(0, GROUND_Y, W, H - GROUND_Y);
+    drawFireworks(t);
+  }
+
+  function drawUniversalScene(t) {
+    drawSoftSky('#2d315f', '#8d78b7');
+    drawStars(t);
+    ctx.fillStyle = '#5b3e6f';
+    for (let x = 120; x < W; x += 220) {
+      ctx.fillRect(x, 330, 120, 230);
+      ctx.fillStyle = '#3d2b52';
+      ctx.beginPath();
+      ctx.moveTo(x - 10, 330); ctx.lineTo(x + 60, 260); ctx.lineTo(x + 130, 330); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#5b3e6f';
+    }
+    ctx.fillStyle = '#f3cb74';
+    ctx.font = '900 42px -apple-system, BlinkMacSystemFont, sans-serif';
+    ctx.fillText('MAGIC', 542, 230);
+    ctx.fillStyle = '#6b4b80';
+    ctx.fillRect(0, GROUND_Y, W, H - GROUND_Y);
+    ctx.strokeStyle = 'rgba(255, 211, 106, .72)';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.arc(645, 292, 90 + Math.sin(t * 4) * 8, .2, Math.PI * 1.3);
+    ctx.stroke();
+  }
+
+  function drawHongKongScene(t) {
+    drawSoftSky('#172a65', '#5b7fc4');
+    drawStars(t);
+    ctx.fillStyle = '#10234a';
+    for (let x = 40; x < W; x += 96) {
+      const h = 150 + (x % 5) * 24;
+      ctx.fillRect(x, 430 - h, 58, h);
+      ctx.fillStyle = '#ffd36a';
+      for (let y = 430 - h + 24; y < 420; y += 36) ctx.fillRect(x + 16, y, 12, 12);
+      ctx.fillStyle = '#10234a';
+    }
+    ctx.fillStyle = '#254c88';
+    ctx.fillRect(0, 440, W, 98);
+    ctx.strokeStyle = 'rgba(255,255,255,.52)';
+    for (let i = 0; i < 5; i++) {
+      ctx.beginPath();
+      ctx.moveTo(0, 462 + i * 18 + Math.sin(t * 4 + i) * 4);
+      ctx.lineTo(W, 462 + i * 18 + Math.cos(t * 4 + i) * 4);
+      ctx.stroke();
+    }
+    ctx.fillStyle = '#30518f';
+    ctx.fillRect(0, GROUND_Y, W, H - GROUND_Y);
+  }
+
+  function drawMacauScene(t) {
+    drawSoftSky('#f2b176', '#ffe1b8');
+    ctx.fillStyle = '#b87a55';
+    roundRect(442, 210, 396, 310, 20, true);
+    ctx.fillStyle = '#8d5c48';
+    ctx.fillRect(478, 250, 60, 94);
+    ctx.fillRect(610, 250, 60, 94);
+    ctx.fillRect(742, 250, 60, 94);
+    ctx.fillStyle = '#f3d0a1';
+    roundRect(590, 384, 100, 136, 50, true);
+    ctx.fillStyle = 'rgba(255,255,255,.2)';
+    for (let y = 522; y < GROUND_Y; y += 24) ctx.fillRect(310, y, 660, 10);
+    ctx.fillStyle = '#bf7f58';
+    ctx.fillRect(0, GROUND_Y, W, H - GROUND_Y);
+    ctx.fillStyle = 'rgba(255, 117, 168, .18)';
+    roundRect(486, 116 + Math.sin(t * Math.PI) * 3, 308, 52, 22, true);
+  }
+
+  function drawStars(t) {
+    ctx.fillStyle = 'rgba(255,255,255,.8)';
+    for (let i = 0; i < 28; i++) {
+      const x = (i * 97 + Math.sin(i) * 30) % W;
+      const y = 58 + (i * 43) % 210;
+      const s = 2 + Math.sin(t * 6 + i) * 1;
+      ctx.fillRect(x, y, s, s);
+    }
+  }
+
+  function drawFireworks(t) {
+    const colors = ['#ffd36a', '#ff75a8', '#8cf4ff'];
+    for (let i = 0; i < 3; i++) {
+      const cx = 260 + i * 380;
+      const cy = 110 + (i % 2) * 48;
+      ctx.strokeStyle = colors[i];
+      ctx.lineWidth = 3;
+      for (let a = 0; a < Math.PI * 2; a += Math.PI / 6) {
+        const len = 22 + Math.sin(t * 6 + i) * 7;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(cx + Math.cos(a) * len, cy + Math.sin(a) * len);
+        ctx.stroke();
+      }
+    }
+  }
+
+  function drawSoftSky(top, bottom) {
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, top);
+    g.addColorStop(.7, bottom);
+    g.addColorStop(1, '#f5c18f');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  function drawClouds(t, color) {
+    ctx.fillStyle = color;
+    for (let i = 0; i < 5; i++) {
+      const x = (i * 310 - game.cameraX * .12) % (W + 260) - 130;
+      const y = 78 + (i % 2) * 42 + Math.sin(t * 3 + i) * 8;
+      ctx.globalAlpha = .72;
+      roundRect(x, y, 92, 26, 13, true);
+      roundRect(x + 34, y - 16, 82, 38, 19, true);
+      roundRect(x + 88, y + 2, 72, 24, 12, true);
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  function drawSchoolBuildings(fill, roof) {
+    ctx.fillStyle = fill;
+    ctx.fillRect(80, 260, 300, 160);
+    ctx.fillRect(454, 230, 370, 190);
+    ctx.fillRect(898, 278, 260, 142);
+    ctx.fillStyle = roof;
+    ctx.fillRect(70, 242, 320, 24);
+    ctx.fillRect(440, 210, 398, 28);
+    ctx.fillRect(884, 258, 288, 24);
+    ctx.fillStyle = 'rgba(255,255,255,.58)';
+    for (let x = 120; x < 360; x += 62) for (let y = 290; y < 398; y += 44) ctx.fillRect(x, y, 32, 22);
+    for (let x = 500; x < 790; x += 62) for (let y = 264; y < 398; y += 44) ctx.fillRect(x, y, 32, 22);
+    for (let x = 930; x < 1130; x += 62) for (let y = 308; y < 398; y += 44) ctx.fillRect(x, y, 32, 22);
+  }
+
+  function drawWeddingCeremonyFrames(ceremony) {
+    const rawIndex = Math.floor(ceremony.time / WEDDING_CEREMONY_FRAME_DURATION);
+    const frameIndex = clamp(rawIndex, 0, WEDDING_CEREMONY_KEYS.length - 1);
+    const image = img(WEDDING_CEREMONY_KEYS[frameIndex]);
+    if (image) drawImageCover(image, 0, 0, W, H);
+    else drawCover();
+
+    const fadeIn = clamp(ceremony.time / .45, 0, 1);
+    const endFade = clamp((ceremony.time - WEDDING_CEREMONY_DURATION + .55) / .55, 0, 1);
+    ctx.fillStyle = `rgba(24, 4, 16, ${.12 + endFade * .38})`;
+    ctx.fillRect(0, 0, W, H);
+    if (fadeIn < 1) {
+      ctx.fillStyle = `rgba(24, 4, 16, ${1 - fadeIn})`;
+      ctx.fillRect(0, 0, W, H);
+    }
+
+    ctx.fillStyle = 'rgba(38, 7, 24, .56)';
+    roundRect(246, 34, 788, 78, 24, true);
+    ctx.strokeStyle = 'rgba(255, 211, 106, .46)';
+    ctx.lineWidth = 2;
+    roundRect(246, 34, 788, 78, 24, false);
+    ctx.fillStyle = '#ffd36a';
+    ctx.font = '900 24px -apple-system, BlinkMacSystemFont, sans-serif';
+    ctx.fillText(`婚礼仪式  ${frameIndex + 1}/8`, 286, 68);
+    ctx.fillStyle = '#fff7f9';
+    ctx.font = '800 22px -apple-system, BlinkMacSystemFont, sans-serif';
+    ctx.fillText(WEDDING_CEREMONY_CAPTIONS[frameIndex], 286, 98);
+
+    ctx.fillStyle = 'rgba(36, 8, 28, .58)';
+    roundRect(420, 626, 440, 38, 19, true);
+    ctx.fillStyle = 'rgba(255,255,255,.36)';
+    roundRect(444, 641, 392, 8, 4, true);
+    ctx.fillStyle = '#ffd36a';
+    roundRect(444, 641, 392 * clamp(ceremony.time / WEDDING_CEREMONY_DURATION, 0, 1), 8, 4, true);
+    drawVignette(.22);
   }
 
   function drawGoal() {
@@ -958,8 +1656,19 @@ canvas {
       glow.addColorStop(1, 'rgba(255, 225, 154, 0)');
       ctx.fillStyle = glow;
       ctx.fillRect(260, 110, 760, 480);
-      ctx.fillStyle = 'rgba(255, 117, 168, .22)';
+      ctx.fillStyle = currentChapter().goalKind === 'farewell' ? 'rgba(255, 211, 106, .24)' : 'rgba(255, 117, 168, .22)';
       roundRect(410, GROUND_Y - 35, 470, 18, 9, true);
+    }
+
+    if (currentChapter().goalKind === 'farewell') {
+      drawFarewellGoal(x, ceremony);
+      ctx.restore();
+      return;
+    }
+    if (currentChapter().goalKind === 'love') {
+      drawLoveGoal(x, ceremony);
+      ctx.restore();
+      return;
     }
 
     drawSingle('weddingArch', assetRects.arch, archX, GROUND_Y - 325, 330, 330);
@@ -981,12 +1690,96 @@ canvas {
     ctx.restore();
   }
 
+  function drawLoveGoal(x, ceremony) {
+    const centerX = ceremony ? 640 : x + 80;
+    ctx.fillStyle = 'rgba(255, 245, 252, .56)';
+    roundRect(centerX - 250, GROUND_Y - 270, 500, 260, 30, true);
+    ctx.strokeStyle = 'rgba(255, 117, 168, .42)';
+    ctx.lineWidth = 4;
+    roundRect(centerX - 250, GROUND_Y - 270, 500, 260, 30, false);
+
+    ctx.fillStyle = '#ffb3c8';
+    roundRect(centerX - 150, GROUND_Y - 112, 300, 24, 12, true);
+    ctx.fillStyle = '#ffd36a';
+    ctx.font = '900 30px -apple-system, BlinkMacSystemFont, sans-serif';
+    ctx.fillText('YES', centerX - 28, GROUND_Y - 166);
+    drawCatSouvenir(centerX + 126, GROUND_Y - 150, 1.2, '#ffd36a');
+    drawCatSouvenir(centerX - 160, GROUND_Y - 140, .95, '#ff75a8');
+
+    const brideSet = ceremony && ceremony.time > 2.2 ? frames.bride.happy : frames.bride.wave;
+    const brideFrame = choose(brideSet, performance.now() / 1000, 4);
+    drawFrame('bride', brideFrame, ceremony ? ceremony.brideX : centerX + 94, GROUND_Y - 198, 100, 156);
+
+    if (ceremony) {
+      ctx.fillStyle = 'rgba(38, 7, 24, .5)';
+      roundRect(320, 104, 640, 92, 24, true);
+      ctx.strokeStyle = 'rgba(255, 211, 106, .42)';
+      roundRect(320, 104, 640, 92, 24, false);
+      ctx.fillStyle = '#fff7f9';
+      ctx.font = '900 24px -apple-system, BlinkMacSystemFont, sans-serif';
+      const text = ceremony.time < 2.2 ? '旅行的最后，她把答案藏进笑里。' : '新娘：好呀，那我们就在一起吧。';
+      ctx.fillText(text, ceremony.time < 2.2 ? 430 : 424, 148);
+      if (ceremony.time >= 2.2) {
+        ctx.fillStyle = '#ffd36a';
+        ctx.font = '800 20px -apple-system, BlinkMacSystemFont, sans-serif';
+        ctx.fillText('那些周边和票根，都变成了相恋的纪念。', 426, 178);
+      }
+    }
+  }
+
+  function drawFarewellGoal(x, ceremony) {
+    const centerX = ceremony ? 640 : x + 80;
+    ctx.fillStyle = 'rgba(255, 244, 219, .5)';
+    roundRect(centerX - 250, GROUND_Y - 276, 500, 266, 28, true);
+    ctx.strokeStyle = 'rgba(139, 77, 54, .36)';
+    ctx.lineWidth = 4;
+    roundRect(centerX - 250, GROUND_Y - 276, 500, 266, 28, false);
+
+    ctx.fillStyle = '#e6a978';
+    ctx.fillRect(centerX - 204, GROUND_Y - 236, 408, 128);
+    ctx.fillStyle = '#96584c';
+    ctx.fillRect(centerX - 220, GROUND_Y - 258, 440, 26);
+    ctx.fillStyle = 'rgba(255,255,255,.62)';
+    for (let wx = centerX - 166; wx <= centerX + 130; wx += 74) {
+      ctx.fillRect(wx, GROUND_Y - 206, 38, 28);
+      ctx.fillRect(wx, GROUND_Y - 160, 38, 28);
+    }
+
+    ctx.fillStyle = '#a96d4a';
+    roundRect(centerX - 155, GROUND_Y - 72, 310, 18, 9, true);
+    ctx.fillStyle = '#6f4a34';
+    roundRect(centerX + 178, GROUND_Y - 120, 58, 76, 10, true);
+    ctx.strokeStyle = '#6f4a34';
+    ctx.strokeRect(centerX + 194, GROUND_Y - 138, 24, 18);
+
+    const brideSet = ceremony && ceremony.time > 2.2 ? frames.bride.happy : frames.bride.wave;
+    const brideFrame = choose(brideSet, performance.now() / 1000, 4);
+    drawFrame('bride', brideFrame, ceremony ? ceremony.brideX : centerX + 98, GROUND_Y - 198, 100, 156);
+
+    if (ceremony) {
+      ctx.fillStyle = 'rgba(38, 7, 24, .5)';
+      roundRect(330, 104, 620, 92, 24, true);
+      ctx.strokeStyle = 'rgba(255, 211, 106, .42)';
+      roundRect(330, 104, 620, 92, 24, false);
+      ctx.fillStyle = '#fff7f9';
+      ctx.font = '900 24px -apple-system, BlinkMacSystemFont, sans-serif';
+      const text = ceremony.time < 2.2 ? '毕业季的风吹过校园，分别悄悄站在路口。' : '新郎：我要毕业了，你还要继续好好读书。';
+      ctx.fillText(text, ceremony.time < 2.2 ? 415 : 386, 148);
+      if (ceremony.time >= 2.2) {
+        ctx.fillStyle = '#ffd36a';
+        ctx.font = '800 20px -apple-system, BlinkMacSystemFont, sans-serif';
+        ctx.fillText('新娘把大二的日子继续写下去，新郎带着海风和牵挂启程。', 356, 178);
+      }
+    }
+  }
+
   function drawEntities() {
     for (const entity of game.entities) {
       const x = entity.worldX - game.cameraX;
       if (x < -260 || x > W + 260) continue;
       if (game.ceremony && entity.type !== 'pickup') continue;
-      if (entity.type === 'roadblock') drawSingle('roadblock', assetRects.roadblock, x - 10, entity.y - 18, entity.w + 24, entity.h + 24);
+      if (entity.type === 'roadblock') drawSingle('roadblock', assetRects.roadblock, x - 8, entity.y - 16, entity.w + 18, entity.h + 20);
+      if (entity.type === 'softObstacle') drawSoftObstacle(entity, x);
       if (entity.type === 'redPacket') {
         const set = entity.hitTimer > 0 ? frames.redPacket.hit : frames.redPacket.walk;
         drawFrame('redPacket', choose(set, entity.animTime, 7), x - 28, entity.y - 26, 128, 128);
@@ -996,10 +1789,196 @@ canvas {
     }
   }
 
+  function drawSoftObstacle(entity, x) {
+    const colors = {
+      '赶课人群': '#5b8def',
+      '排队队伍': '#f49a54',
+      '海边行李箱': '#4bb6c7',
+      '毕业人群': '#8562d5',
+      '排队人潮': '#ff75a8',
+      '魔法人群': '#8f6bd8',
+      '港湾人潮': '#63a5ff',
+      '石阶游客': '#d68a5f',
+      '山治': '#f1c75b'
+    };
+    const color = colors[entity.label] || '#8aa2d6';
+    ctx.save();
+    if (entity.label === '山治') {
+      drawSanji(x + entity.w / 2, entity.y + entity.h / 2, entity.animTime);
+      ctx.fillStyle = 'rgba(36, 8, 28, .66)';
+      roundRect(x - 8, entity.y - 24, entity.label.length * 16 + 22, 26, 13, true);
+      ctx.fillStyle = '#fff7f9';
+      ctx.font = '700 14px -apple-system, BlinkMacSystemFont, sans-serif';
+      ctx.fillText(entity.label, x + 3, entity.y - 6);
+      ctx.restore();
+      return;
+    }
+    ctx.fillStyle = 'rgba(43, 22, 28, .18)';
+    roundRect(x + 8, GROUND_Y - 16, entity.w - 12, 12, 6, true);
+    for (let i = 0; i < 2; i++) {
+      const px = x + 18 + i * 24;
+      const bob = Math.sin(entity.animTime * 5 + i) * 3;
+      ctx.fillStyle = color;
+      roundRect(px, entity.y + 32 + bob, 20, 45, 10, true);
+      ctx.fillStyle = '#ffd7b5';
+      ctx.beginPath();
+      ctx.arc(px + 10, entity.y + 22 + bob, 10, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    if (entity.label === '海边行李箱') {
+      ctx.fillStyle = '#ffcf67';
+      roundRect(x + 28, entity.y + 50, 42, 40, 8, true);
+      ctx.strokeStyle = '#7a4e2f';
+      ctx.strokeRect(x + 40, entity.y + 38, 18, 15);
+    }
+    ctx.fillStyle = 'rgba(36, 8, 28, .66)';
+    roundRect(x - 8, entity.y - 24, entity.label.length * 16 + 22, 26, 13, true);
+    ctx.fillStyle = '#fff7f9';
+    ctx.font = '700 14px -apple-system, BlinkMacSystemFont, sans-serif';
+    ctx.fillText(entity.label, x + 3, entity.y - 6);
+    ctx.restore();
+  }
+
   function drawPickup(entity, x) {
+    if (entity.item === 'luckyCat' || entity.item === 'catCharm') {
+      drawCatSouvenir(x + entity.w / 2, entity.y + entity.h / 2, entity.item === 'luckyCat' ? .9 : .74, entity.item === 'luckyCat' ? '#ffd36a' : '#ff75a8');
+      return;
+    }
+    if (['zootopiaBadge', 'stellalouDoll', 'harryMagnet', 'onePieceMagnet'].includes(entity.item)) {
+      drawTravelCollectible(entity.item, x + entity.w / 2, entity.y + entity.h / 2, entity.animTime);
+      return;
+    }
     const rectName = entity.item === 'heart' || entity.item === 'ring' ? 'heart' : entity.item;
     const rect = assetRects.items[rectName] || assetRects.items.redPacket;
     drawSingle('items', rect, x, entity.y, entity.w, entity.h);
+  }
+
+  function drawTravelCollectible(item, cx, cy, animTime) {
+    ctx.save();
+    ctx.translate(cx, cy + Math.sin(animTime * 4) * 3);
+    if (item === 'zootopiaBadge') {
+      ctx.fillStyle = '#4bb6c7';
+      ctx.beginPath();
+      ctx.arc(0, 0, 25, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#ffd36a';
+      ctx.lineWidth = 5;
+      ctx.stroke();
+      ctx.fillStyle = '#fff7f9';
+      ctx.font = '900 18px -apple-system, BlinkMacSystemFont, sans-serif';
+      ctx.fillText('Z', -6, 7);
+      ctx.fillStyle = '#ffd36a';
+      ctx.fillRect(-14, 23, 28, 8);
+    } else if (item === 'stellalouDoll') {
+      ctx.fillStyle = '#b59cff';
+      ctx.beginPath();
+      ctx.ellipse(0, 4, 22, 28, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse(-12, -24, 8, 24, -.35, 0, Math.PI * 2);
+      ctx.ellipse(12, -24, 8, 24, .35, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#3b0c16';
+      ctx.beginPath();
+      ctx.arc(-7, 0, 3, 0, Math.PI * 2);
+      ctx.arc(7, 0, 3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#ff75a8';
+      roundRect(-18, 18, 36, 10, 5, true);
+    } else if (item === 'harryMagnet') {
+      ctx.fillStyle = '#5b3e6f';
+      roundRect(-24, -22, 48, 44, 8, true);
+      ctx.fillStyle = '#ffd36a';
+      ctx.font = '900 24px Georgia, serif';
+      ctx.fillText('H', -9, 9);
+      ctx.strokeStyle = '#ffd36a';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(8, -18); ctx.lineTo(-4, 1); ctx.lineTo(9, 1); ctx.lineTo(-4, 20);
+      ctx.stroke();
+    } else if (item === 'onePieceMagnet') {
+      ctx.fillStyle = '#df6b61';
+      roundRect(-24, -22, 48, 44, 8, true);
+      ctx.fillStyle = '#ffe29a';
+      ctx.beginPath();
+      ctx.arc(0, -2, 16, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#3b0c16';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(-19, -10); ctx.lineTo(19, -10);
+      ctx.stroke();
+      ctx.fillStyle = '#3b0c16';
+      ctx.font = '900 14px -apple-system, BlinkMacSystemFont, sans-serif';
+      ctx.fillText('OP', -10, 18);
+    }
+    ctx.restore();
+  }
+
+  function drawSanji(cx, cy, animTime) {
+    ctx.save();
+    const lean = Math.sin(animTime * 10) * .15;
+    ctx.translate(cx, cy);
+    ctx.rotate(lean);
+    ctx.fillStyle = 'rgba(43, 22, 28, .18)';
+    roundRect(-22, 32, 44, 10, 5, true);
+    ctx.fillStyle = '#f1c75b';
+    ctx.beginPath();
+    ctx.arc(0, -24, 15, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#22243a';
+    roundRect(-13, -10, 26, 38, 8, true);
+    ctx.strokeStyle = '#22243a';
+    ctx.lineWidth = 7;
+    ctx.beginPath();
+    ctx.moveTo(-7, 26); ctx.lineTo(-20, 44);
+    ctx.moveTo(7, 26); ctx.lineTo(24, 38 + Math.sin(animTime * 12) * 7);
+    ctx.stroke();
+    ctx.strokeStyle = '#ffd7b5';
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.moveTo(-13, 0); ctx.lineTo(-28, 13);
+    ctx.moveTo(13, 0); ctx.lineTo(28, -12);
+    ctx.stroke();
+    ctx.fillStyle = '#fff7f9';
+    ctx.font = '900 12px -apple-system, BlinkMacSystemFont, sans-serif';
+    ctx.fillText('跳', -6, 8);
+    ctx.restore();
+  }
+
+  function drawCatSouvenir(cx, cy, scale, color) {
+    ctx.save();
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 24 * scale, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(cx - 20 * scale, cy - 15 * scale);
+    ctx.lineTo(cx - 10 * scale, cy - 34 * scale);
+    ctx.lineTo(cx + 1 * scale, cy - 12 * scale);
+    ctx.closePath();
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(cx + 20 * scale, cy - 15 * scale);
+    ctx.lineTo(cx + 10 * scale, cy - 34 * scale);
+    ctx.lineTo(cx - 1 * scale, cy - 12 * scale);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#3b0c16';
+    ctx.beginPath();
+    ctx.arc(cx - 8 * scale, cy - 2 * scale, 3 * scale, 0, Math.PI * 2);
+    ctx.arc(cx + 8 * scale, cy - 2 * scale, 3 * scale, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#3b0c16';
+    ctx.lineWidth = 2 * scale;
+    ctx.beginPath();
+    ctx.moveTo(cx - 6 * scale, cy + 9 * scale);
+    ctx.quadraticCurveTo(cx, cy + 15 * scale, cx + 6 * scale, cy + 9 * scale);
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,.72)';
+    ctx.font = `${Math.max(10, 12 * scale)}px -apple-system, BlinkMacSystemFont, sans-serif`;
+    ctx.fillText('哈', cx - 6 * scale, cy + 29 * scale);
+    ctx.restore();
   }
 
   function drawBoss() {
@@ -1071,13 +2050,14 @@ canvas {
   }
 
   function drawHud() {
+    const chapter = currentChapter();
     ctx.save();
     ctx.imageSmoothingEnabled = false;
     ctx.fillStyle = 'rgba(36, 8, 28, .64)';
-    roundRect(24, 18, 560, 58, 18, true);
+    roundRect(24, 18, 640, 58, 18, true);
     ctx.strokeStyle = 'rgba(255, 211, 106, .38)';
     ctx.lineWidth = 2;
-    roundRect(24, 18, 560, 58, 18, false);
+    roundRect(24, 18, 640, 58, 18, false);
 
     ctx.font = '900 28px -apple-system, BlinkMacSystemFont, sans-serif';
     ctx.fillStyle = '#ff4d6d';
@@ -1086,25 +2066,40 @@ canvas {
     ctx.fillText('❤'.repeat(player.maxHearts - player.hearts), 46 + player.hearts * 31, 55);
 
     ctx.fillStyle = '#fff7f9';
-    ctx.font = '800 22px -apple-system, BlinkMacSystemFont, sans-serif';
-    ctx.fillText(`红包 x${game.redPackets}`, 185, 54);
+    ctx.font = '800 20px -apple-system, BlinkMacSystemFont, sans-serif';
+    ctx.fillText(`${chapter.countLabel} x${chapterCollectCount()}`, 185, 54);
     ctx.fillText(`分数 ${String(game.score).padStart(5, '0')}`, 315, 54);
+    ctx.fillStyle = '#ffd36a';
+    ctx.fillText(chapter.title, 480, 54);
 
-    const timeW = 245;
+    const timeW = 285;
     ctx.fillStyle = 'rgba(36, 8, 28, .64)';
     roundRect(W - timeW - 24, 18, timeW, 58, 18, true);
     ctx.strokeStyle = game.timeLeft < 20 ? '#ff4d6d' : 'rgba(255, 211, 106, .38)';
     roundRect(W - timeW - 24, 18, timeW, 58, 18, false);
     ctx.fillStyle = game.timeLeft < 20 ? '#ff758f' : '#ffd36a';
-    ctx.font = '900 24px -apple-system, BlinkMacSystemFont, sans-serif';
-    ctx.fillText(`婚礼倒计时 ${Math.ceil(game.timeLeft)}s`, W - timeW + 2, 54);
+    ctx.font = '900 23px -apple-system, BlinkMacSystemFont, sans-serif';
+    ctx.fillText(`${chapter.timerLabel} ${Math.ceil(game.timeLeft)}s`, W - timeW - 2, 54);
+
+    if (game.storyTimer > 0 && game.storyText) {
+      const alpha = clamp(game.storyTimer / .8, 0, 1);
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = 'rgba(36, 8, 28, .72)';
+      roundRect(260, 94, 760, 64, 22, true);
+      ctx.strokeStyle = 'rgba(255, 211, 106, .36)';
+      roundRect(260, 94, 760, 64, 22, false);
+      ctx.fillStyle = '#fff7f9';
+      ctx.font = '900 22px -apple-system, BlinkMacSystemFont, sans-serif';
+      ctx.fillText(game.storyText, 295, 134);
+      ctx.globalAlpha = 1;
+    }
 
     if (game.boss && !game.boss.defeated) {
       ctx.fillStyle = 'rgba(36, 8, 28, .58)';
-      roundRect(440, 88, 400, 38, 16, true);
+      roundRect(440, 164, 400, 38, 16, true);
       ctx.fillStyle = '#ffd36a';
       ctx.font = '900 18px -apple-system, BlinkMacSystemFont, sans-serif';
-      ctx.fillText('堵车怪挡路中：撒喜糖开路！', 518, 113);
+      ctx.fillText('堵车怪挡路中：撒喜糖开路！', 518, 189);
     }
     ctx.restore();
   }
