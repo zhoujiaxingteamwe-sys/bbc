@@ -532,15 +532,17 @@ canvas {
   function isChapterTwo() { return currentChapter().id === 'chapter2'; }
 
   function loadAssets() {
+    game.mode = 'menu';
+    updateOverlay();
+
     const entries = Object.entries(manifest);
     let done = 0;
-    return Promise.all(entries.map(([name, src]) => loadImage(name, src).then(() => {
-      done += 1;
-      game.loadProgress = done / entries.length;
-    }))).then(() => {
-      game.mode = 'menu';
-      updateOverlay();
-      requestIdle(() => loadCeremonyAssets());
+    entries.forEach(([name, src]) => {
+      loadImage(name, src).then(() => {
+        done += 1;
+        game.loadProgress = done / entries.length;
+        if (game.mode === 'loading') updateOverlay();
+      });
     });
   }
 
@@ -605,9 +607,19 @@ canvas {
   }
 
   function startGame(chapterId = game.currentChapterId) {
+    ensureChapterAssets(chapterId);
     resetGame(chapterId);
     game.mode = 'playing';
     updateOverlay();
+  }
+
+  function ensureChapterAssets(chapterId) {
+    const assets = ['groom', 'bride', 'items'];
+    if (chapterId === 'wedding') assets.push('streetBg', 'redPacket', 'balloon', 'trafficBoss', 'candy', 'roadblock', 'weddingCar', 'weddingArch');
+    for (const name of assets) {
+      if (images[name] === undefined) loadImage(name, manifest[name]);
+    }
+    if (chapterId === 'wedding') loadCeremonyAssets();
   }
 
   function setMode(mode) {
