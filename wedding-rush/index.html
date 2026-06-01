@@ -503,6 +503,7 @@ canvas {
     ceremony: null,
     ceremonyAssetsStarted: false,
     ceremonyAssetsReady: false,
+    assetPromises: {},
     screenShake: 0,
     message: ''
   };
@@ -532,22 +533,28 @@ canvas {
   function isChapterTwo() { return currentChapter().id === 'chapter2'; }
 
   function loadAssets() {
-    game.mode = 'menu';
+    const entries = Object.entries({ ...manifest, ...ceremonyManifest });
+    let done = 0;
+    game.loadProgress = 0;
     updateOverlay();
 
-    const entries = Object.entries(manifest);
-    let done = 0;
-    entries.forEach(([name, src]) => {
-      loadImage(name, src).then(() => {
-        done += 1;
-        game.loadProgress = done / entries.length;
-        if (game.mode === 'loading') updateOverlay();
-      });
+    Promise.all(entries.map(([name, src]) => loadImage(name, src).then(() => {
+      done += 1;
+      game.loadProgress = done / entries.length;
+      updateOverlay();
+    }))).then(() => {
+      game.ceremonyAssetsStarted = true;
+      game.ceremonyAssetsReady = true;
+      game.mode = 'menu';
+      updateOverlay();
     });
   }
 
   function loadImage(name, src) {
-    return new Promise(resolve => {
+    if (!src) return Promise.resolve(null);
+    if (images[name] !== undefined) return Promise.resolve(images[name]);
+    if (game.assetPromises[name]) return game.assetPromises[name];
+    game.assetPromises[name] = new Promise(resolve => {
       const image = new Image();
       image.onload = () => {
         images[name] = image;
@@ -560,19 +567,17 @@ canvas {
       };
       image.src = src;
     });
-  }
-
-  function requestIdle(task) {
-    if ('requestIdleCallback' in window) window.requestIdleCallback(task, { timeout: 1800 });
-    else window.setTimeout(task, 600);
+    return game.assetPromises[name];
   }
 
   function loadCeremonyAssets() {
-    if (game.ceremonyAssetsStarted) return;
+    if (game.ceremonyAssetsReady) return Promise.resolve();
+    if (game.ceremonyAssetsStarted) return game.assetPromises.__ceremony || Promise.resolve();
     game.ceremonyAssetsStarted = true;
-    Promise.all(Object.entries(ceremonyManifest).map(([name, src]) => loadImage(name, src))).then(() => {
+    game.assetPromises.__ceremony = Promise.all(Object.entries(ceremonyManifest).map(([name, src]) => loadImage(name, src))).then(() => {
       game.ceremonyAssetsReady = true;
     });
+    return game.assetPromises.__ceremony;
   }
 
   function resetGame(chapterId = game.currentChapterId) {
@@ -607,19 +612,10 @@ canvas {
   }
 
   function startGame(chapterId = game.currentChapterId) {
-    ensureChapterAssets(chapterId);
-    resetGame(chapterId);
+    const id = chapters[chapterId]?.playable ? chapterId : 'chapter1';
+    resetGame(id);
     game.mode = 'playing';
     updateOverlay();
-  }
-
-  function ensureChapterAssets(chapterId) {
-    const assets = ['groom', 'bride', 'items'];
-    if (chapterId === 'wedding') assets.push('streetBg', 'redPacket', 'balloon', 'trafficBoss', 'candy', 'roadblock', 'weddingCar', 'weddingArch');
-    for (const name of assets) {
-      if (images[name] === undefined) loadImage(name, manifest[name]);
-    }
-    if (chapterId === 'wedding') loadCeremonyAssets();
   }
 
   function setMode(mode) {
@@ -656,8 +652,8 @@ canvas {
       overlay.innerHTML = `
         <div class="menu-card">
           <h1>新郎冲冲冲</h1>
-          <div class="tagline">婚礼倒计时素材加载中...</div>
-          <p>正在准备玫瑰、喜糖、婚车和美泉宫婚礼现场。</p>
+          <div class="tagline">全部贴图加载中...</div>
+          <p>正在一次性准备人物、道具、场景和婚礼结尾动画。加载完成后再进入菜单，游戏过程中就不会缺贴图。</p>
           <p>加载进度：${Math.round(game.loadProgress * 100)}%</p>
         </div>`;
       return;
@@ -967,7 +963,6 @@ canvas {
     game.cameraX = cameraTarget;
     game.entities = [];
     game.bullets = [];
-    if (chapter.goalKind === 'wedding') loadCeremonyAssets();
     game.ceremony = {
       time: 0,
       cameraTarget,
@@ -1651,7 +1646,6 @@ canvas {
       ctx.fillStyle = '#ffd36a';
       ctx.font = '900 28px -apple-system, BlinkMacSystemFont, sans-serif';
       ctx.fillText('婚礼仪式正在加载...', 500, 350);
-      loadCeremonyAssets();
     }
 
     const fadeIn = clamp(ceremony.time / .45, 0, 1);
