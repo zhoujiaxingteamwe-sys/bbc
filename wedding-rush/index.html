@@ -264,7 +264,10 @@ canvas {
     roadblock: 'assets/roadblock.png',
     weddingCar: 'assets/wedding_car.png',
     weddingArch: 'assets/wedding_arch.png',
-    hudBar: 'assets/hud_bar.png',
+    hudBar: 'assets/hud_bar.png'
+  };
+
+  const ceremonyManifest = {
     ceremony01: 'assets/ceremony_01.png',
     ceremony02: 'assets/ceremony_02.png',
     ceremony03: 'assets/ceremony_03.png',
@@ -498,6 +501,8 @@ canvas {
     boss: null,
     goal: null,
     ceremony: null,
+    ceremonyAssetsStarted: false,
+    ceremonyAssetsReady: false,
     screenShake: 0,
     message: ''
   };
@@ -529,25 +534,42 @@ canvas {
   function loadAssets() {
     const entries = Object.entries(manifest);
     let done = 0;
-    return Promise.all(entries.map(([name, src]) => new Promise(resolve => {
+    return Promise.all(entries.map(([name, src]) => loadImage(name, src).then(() => {
+      done += 1;
+      game.loadProgress = done / entries.length;
+    }))).then(() => {
+      game.mode = 'menu';
+      updateOverlay();
+      requestIdle(() => loadCeremonyAssets());
+    });
+  }
+
+  function loadImage(name, src) {
+    return new Promise(resolve => {
       const image = new Image();
       image.onload = () => {
         images[name] = image;
-        done += 1;
-        game.loadProgress = done / entries.length;
-        resolve();
+        resolve(image);
       };
       image.onerror = () => {
         console.warn('素材加载失败:', src);
         images[name] = null;
-        done += 1;
-        game.loadProgress = done / entries.length;
-        resolve();
+        resolve(null);
       };
       image.src = src;
-    }))).then(() => {
-      game.mode = 'menu';
-      updateOverlay();
+    });
+  }
+
+  function requestIdle(task) {
+    if ('requestIdleCallback' in window) window.requestIdleCallback(task, { timeout: 1800 });
+    else window.setTimeout(task, 600);
+  }
+
+  function loadCeremonyAssets() {
+    if (game.ceremonyAssetsStarted) return;
+    game.ceremonyAssetsStarted = true;
+    Promise.all(Object.entries(ceremonyManifest).map(([name, src]) => loadImage(name, src))).then(() => {
+      game.ceremonyAssetsReady = true;
     });
   }
 
@@ -933,6 +955,7 @@ canvas {
     game.cameraX = cameraTarget;
     game.entities = [];
     game.bullets = [];
+    if (chapter.goalKind === 'wedding') loadCeremonyAssets();
     game.ceremony = {
       time: 0,
       cameraTarget,
@@ -1609,7 +1632,15 @@ canvas {
     const frameIndex = clamp(rawIndex, 0, WEDDING_CEREMONY_KEYS.length - 1);
     const image = img(WEDDING_CEREMONY_KEYS[frameIndex]);
     if (image) drawImageCover(image, 0, 0, W, H);
-    else drawCover();
+    else {
+      drawCover();
+      ctx.fillStyle = 'rgba(24, 4, 16, .62)';
+      ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = '#ffd36a';
+      ctx.font = '900 28px -apple-system, BlinkMacSystemFont, sans-serif';
+      ctx.fillText('婚礼仪式正在加载...', 500, 350);
+      loadCeremonyAssets();
+    }
 
     const fadeIn = clamp(ceremony.time / .45, 0, 1);
     const endFade = clamp((ceremony.time - WEDDING_CEREMONY_DURATION + .55) / .55, 0, 1);
