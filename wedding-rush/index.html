@@ -59,6 +59,17 @@ canvas {
   image-rendering: pixelated;
   background: #5ac7ff;
 }
+.success-video {
+  position: absolute;
+  inset: 0;
+  display: none;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background: #000;
+  z-index: 4;
+}
+.success-video.show { display: block; }
 .screen-overlay {
   position: absolute;
   inset: 0;
@@ -200,6 +211,7 @@ canvas {
 <div class="game-page">
   <div class="game-shell" id="gameShell">
     <canvas id="gameCanvas" width="1280" height="720" aria-label="新郎冲冲冲游戏画面"></canvas>
+    <video class="success-video" id="successVideo" src="assets/wedding_success.mp4" playsinline preload="auto"></video>
     <div class="screen-overlay show" id="screenOverlay"></div>
     <div class="touch-controls" id="touchControls">
       <div class="touch-group">
@@ -222,18 +234,19 @@ canvas {
   const canvas = document.getElementById('gameCanvas');
   const ctx = canvas.getContext('2d');
   const overlay = document.getElementById('screenOverlay');
+  const successVideo = document.getElementById('successVideo');
   const touchControls = document.getElementById('touchControls');
 
   const W = 1280;
   const H = 720;
   const GROUND_Y = 612;
   const GRAVITY = 2200;
-  const JUMP_V = -820;
+  const JUMP_V = -920;
   const RUN_SPEED = 220;
   const WEDDING_END_X = 5250;
   const WEDDING_BOSS_X = 3900;
-  const CHAPTER1_END_X = 7600;
-  const CHAPTER2_END_X = 8400;
+  const CHAPTER1_END_X = 6200;
+  const CHAPTER2_END_X = 20500;
   const DEBUG_HITBOXES = false;
   const WEDDING_CEREMONY_FRAME_DURATION = 1.05;
   const WEDDING_CEREMONY_DURATION = WEDDING_CEREMONY_FRAME_DURATION * 8 + .8;
@@ -256,6 +269,15 @@ canvas {
     streetBg: 'assets/street_bg.png',
     groom: 'assets/groom_spritesheet.png',
     bride: 'assets/bride_spritesheet.png',
+    brideCh1CafeteriaMilitary: 'assets/bride_ch1_cafeteria_military_api_spritesheet_transparent.png',
+    brideCh1Qingdao: 'assets/bride_ch1_qingdao_npc_pixel_transparent.png',
+    brideCh1Graduation: 'assets/bride_ch1_graduation_npc_pixel_transparent.png',
+    bgCh1Cafeteria: 'assets/ch1_bg_cafeteria.png',
+    bgCh1Qingdao: 'assets/ch1_bg_qingdao.png',
+    bgCh1Graduation: 'assets/ch1_bg_graduation.png',
+    chapter1Collectibles: 'assets/ch1_collectibles_sheet_transparent.png',
+    chapter1QingdaoFood: 'assets/ch1_qingdao_food_sheet_transparent.png',
+    chapter1Obstacles: 'assets/ch1_obstacles_sheet_transparent.png',
     redPacket: 'assets/red_packet_enemy_spritesheet.png',
     balloon: 'assets/balloon_enemy_spritesheet.png',
     trafficBoss: 'assets/traffic_boss_spritesheet.png',
@@ -264,7 +286,32 @@ canvas {
     roadblock: 'assets/roadblock.png',
     weddingCar: 'assets/wedding_car.png',
     weddingArch: 'assets/wedding_arch.png',
-    hudBar: 'assets/hud_bar.png'
+    hudBar: 'assets/hud_bar.png',
+    bgDisney: 'assets/bg_disney_zootopia.png',
+    bgUniversal: 'assets/bg_universal_magic_sanji.png',
+    bgHongKong: 'assets/bg_hongkong_victoria_harbour.png',
+    bgMacau: 'assets/bg_macau_ruins.png',
+    bgGrandCanal: 'assets/bg_tongzhou_grand_canal.png',
+    groomCh2Disney: 'assets/groom_ch2_disney_spritesheet.png',
+    groomCh2Universal: 'assets/groom_ch2_universal_spritesheet.png',
+    groomCh2HkMacau: 'assets/groom_ch2_hk_macau_spritesheet.png',
+    groomCh2GrandCanal: 'assets/groom_ch2_grandcanal_spritesheet.png',
+    sanjiObstacle: 'assets/sanji_obstacle.png',
+    chapter2TouristObstacles: 'assets/chapter2_tourist_obstacles_pixel_sheet_transparent.png',
+    brideCh2Disney: 'assets/bride_ch2_disney_regenerated_yellow_skirt_from_api_transparent.png',
+    brideCh2Universal: 'assets/bride_ch2_universal_npc_pixel_transparent.png',
+    brideCh2HongKong: 'assets/bride_ch2_hongkong_npc_pixel_v3_transparent.png',
+    brideCh2Macau: 'assets/bride_ch2_macau_npc_pixel_v2_transparent.png',
+    brideCh2GrandCanal: 'assets/bride_ch2_grandcanal_npc_pixel_transparent.png',
+    loveEmbrace: 'assets/ch2_love_embrace_pixel_animation_v3_transparent.png',
+    chapter2Collectibles: 'assets/chapter2_collectibles_pixel_sheet_v2_transparent.png',
+    chapter2FoodCollectibles: 'assets/chapter2_food_collectibles_pixel_sheet_clean.png',
+    chapter2SceneMonsters: 'assets/chapter2_scene_monsters_pixel_sheet_v4_cleaned.png',
+    attackFxDisney: 'assets/attack_fx_disney.png',
+    attackFxUniversal: 'assets/attack_fx_universal.png',
+    attackFxHkMacau: 'assets/attack_fx_hk_macau.png',
+    attackFxGrandCanal: 'assets/attack_fx_grandcanal.png',
+    goldPendantOriginal: 'assets/金吊坠.png'
   };
 
   const ceremonyManifest = {
@@ -318,6 +365,158 @@ canvas {
     }
   };
 
+  const chapter2BrideFrames = {
+    disney: [
+      r(76, 36, 100, 174), r(253, 37, 99, 173), r(444, 39, 95, 172), r(647, 39, 95, 172), r(835, 39, 95, 172),
+      r(76, 236, 101, 162), r(247, 232, 99, 168), r(424, 231, 98, 169), r(612, 230, 100, 168), r(808, 229, 101, 169),
+      r(76, 427, 106, 171), r(250, 429, 112, 170), r(433, 431, 107, 171), r(633, 431, 109, 170), r(825, 432, 109, 170),
+      r(77, 619, 112, 165), r(254, 626, 113, 160), r(461, 623, 107, 162), r(619, 623, 120, 163), r(822, 625, 117, 161)
+    ],
+    universal: [
+      r(92, 95, 100, 154), r(277, 98, 97, 151), r(469, 99, 96, 150), r(642, 102, 95, 148), r(829, 103, 110, 147),
+      r(81, 339, 123, 152), r(264, 346, 95, 145), r(452, 342, 123, 151), r(654, 342, 111, 150), r(831, 342, 107, 150),
+      r(90, 569, 101, 142), r(264, 575, 100, 136), r(480, 574, 97, 139), r(633, 567, 126, 147), r(811, 561, 146, 156),
+      r(82, 792, 116, 147), r(257, 795, 106, 145), r(456, 795, 101, 146), r(633, 796, 96, 145), r(805, 798, 104, 144)
+    ],
+    hongkong: [
+      r(78, 31, 141, 204), r(293, 38, 143, 197), r(501, 38, 137, 197), r(714, 38, 156, 197),
+      r(60, 262, 138, 204), r(231, 265, 143, 201), r(413, 271, 126, 195), r(596, 272, 125, 194), r(738, 266, 90, 203), r(912, 272, 73, 197),
+      r(67, 497, 126, 183), r(266, 501, 138, 177), r(452, 509, 110, 168), r(612, 507, 123, 170), r(792, 510, 122, 167),
+      r(66, 727, 122, 215), r(263, 711, 126, 236), r(462, 719, 114, 230), r(634, 771, 118, 180), r(794, 730, 121, 221)
+    ],
+    macau: [
+      r(122, 25, 118, 204), r(330, 26, 116, 203), r(562, 27, 115, 202), r(765, 28, 116, 202),
+      r(110, 271, 110, 190), r(300, 271, 107, 190), r(465, 272, 104, 189), r(640, 271, 103, 190), r(806, 272, 105, 189),
+      r(117, 506, 116, 202), r(329, 507, 115, 201), r(542, 507, 114, 201), r(774, 511, 112, 197),
+      r(98, 751, 138, 203), r(320, 755, 113, 200), r(552, 755, 115, 200), r(764, 756, 124, 199)
+    ],
+    grandcanal: [
+      r(255, 159, 106, 193), r(456, 161, 103, 191), r(642, 161, 102, 191),
+      r(116, 419, 105, 188), r(323, 416, 110, 191), r(546, 422, 119, 185), r(749, 425, 121, 184),
+      r(218, 661, 101, 186), r(450, 658, 98, 189), r(649, 663, 98, 184)
+    ]
+  };
+
+  const chapter2BrideImageKeys = {
+    disney: 'brideCh2Disney',
+    universal: 'brideCh2Universal',
+    hongkong: 'brideCh2HongKong',
+    macau: 'brideCh2Macau',
+    grandcanal: 'brideCh2GrandCanal'
+  };
+
+  const chapter1NpcFrames = [
+    r(0, 0, 256, 341), r(256, 0, 256, 341), r(512, 0, 256, 341), r(768, 0, 256, 341),
+    r(0, 341, 256, 341), r(256, 341, 256, 341), r(512, 341, 256, 341), r(768, 341, 256, 341),
+    r(0, 682, 256, 342), r(256, 682, 256, 342), r(512, 682, 256, 342), r(768, 682, 256, 342)
+  ];
+
+  const loveEmbraceFrames = [
+    r(24, 192, 185, 188), r(320, 198, 110, 182), r(507, 193, 119, 187), r(769, 192, 140, 188),
+    r(20, 521, 195, 224), r(274, 524, 180, 221), r(527, 522, 179, 223), r(811, 525, 174, 220)
+  ];
+
+  const chapter1CollectibleFrames = {
+    mealTray: r(0, 0, 256, 341),
+    mealCard: r(256, 0, 256, 341),
+    milkTea: r(512, 0, 256, 341),
+    chatNote: r(768, 0, 256, 341),
+    seashell: r(0, 341, 256, 341),
+    seasidePhoto: r(256, 341, 256, 341),
+    beachTicket: r(512, 341, 256, 341),
+    graduationPhoto: r(768, 341, 256, 341),
+    graduationCap: r(0, 682, 256, 342),
+    schoolBadge: r(256, 682, 256, 342),
+    chapter1Rose: r(512, 682, 256, 342),
+    chapter1Heart: r(768, 682, 256, 342)
+  };
+
+  const chapter1QingdaoFoodFrames = {
+    friedClams: r(0, 0, 256, 512),
+    qingdaoBarbecue: r(0, 512, 256, 512)
+  };
+
+  const chapter1CollectibleItems = [
+    ...Object.keys(chapter1CollectibleFrames),
+    ...Object.keys(chapter1QingdaoFoodFrames)
+  ];
+
+  const chapter1ObstacleFrames = {
+    '排队队伍': [r(0, 0, 256, 341), r(256, 0, 256, 341), r(512, 0, 256, 341), r(768, 0, 256, 341)],
+    '海边游客': [r(0, 341, 256, 341), r(256, 341, 256, 341), r(512, 341, 256, 341), r(768, 341, 256, 341)],
+    '毕业人群': [r(0, 682, 256, 342), r(256, 682, 256, 342), r(512, 682, 256, 342), r(768, 682, 256, 342)]
+  };
+
+  const chapter2CollectibleFrames = {
+    zootopiaBadge: r(24, 169, 251, 265),
+    stellalouDoll: r(306, 127, 156, 313),
+    harryMagnet: r(494, 139, 225, 315),
+    onePieceMagnet: r(751, 173, 244, 257),
+    luckyCat: r(37, 562, 287, 303),
+    eggTartHachiware: r(397, 571, 234, 296),
+    goldPendant: r(723, 533, 186, 385)
+  };
+
+  const chapter2FoodCollectibleFrames = {
+    winnieToast: r(77, 11, 246, 202),
+    pigletPizza: r(354, 17, 295, 196),
+    mickeySnack: r(694, 21, 223, 192),
+    luffyBeefRice: r(75, 197, 262, 221),
+    butterbeer: r(396, 197, 235, 221),
+    popcorn: r(687, 197, 246, 221),
+    wontonNoodles: r(72, 402, 268, 220),
+    boatCongee: r(369, 402, 322, 220),
+    roastGoose: r(675, 402, 276, 220),
+    steak: r(56, 606, 292, 221),
+    porkChopBun: r(388, 606, 232, 221),
+    eggTart: r(688, 606, 236, 198),
+    doumiHotpot: r(51, 811, 285, 201),
+    sushiro: r(360, 811, 331, 189),
+    skewers: r(675, 813, 291, 192)
+  };
+
+  const chapter2SceneMonsterFrames = {
+    disney: [r(0, 0, 256, 204), r(256, 0, 256, 204), r(512, 0, 256, 204), r(768, 0, 256, 204)],
+    universal: [r(0, 204, 256, 205), r(256, 204, 256, 205), r(512, 204, 256, 205), r(768, 204, 256, 205)],
+    hongkong: [r(0, 409, 256, 205), r(256, 409, 256, 205), r(512, 409, 256, 205), r(768, 409, 256, 205)],
+    macau: [r(0, 614, 256, 205), r(256, 614, 256, 205), r(512, 614, 256, 205), r(768, 614, 256, 205)],
+    grandcanal: [r(0, 819, 256, 205), r(256, 819, 256, 205), r(512, 819, 256, 205), r(768, 819, 256, 205)]
+  };
+
+  const chapter2SceneMonsterLabels = {
+    disney: ['囚服羊怪', '邪恶女王'],
+    universal: ['黑魔王', '黑巫师'],
+    hongkong: ['小旋风', '雷雨云'],
+    macau: ['美钞怪', '金币怪'],
+    grandcanal: ['运河浪怪', '水滴精灵']
+  };
+
+  const chapter2AttackFxVisibleRects = {
+    attackFxDisney: r(197, 81, 123, 94),
+    attackFxUniversal: r(202, 75, 107, 106),
+    attackFxHkMacau: r(196, 76, 125, 104),
+    attackFxGrandCanal: r(200, 76, 112, 104)
+  };
+  const chapter2FoodCollectibleItems = Object.keys(chapter2FoodCollectibleFrames);
+  const chapter2CollectibleItems = Object.keys(chapter2CollectibleFrames);
+  const chapter2AllCollectibleItems = [...chapter2CollectibleItems, ...chapter2FoodCollectibleItems];
+
+  const chapter2TouristObstacleFrames = {
+    disney: [r(0, 0, 256, 205), r(256, 0, 256, 205), r(512, 0, 256, 205), r(768, 0, 256, 205)],
+    universal: [r(0, 205, 256, 205), r(256, 205, 256, 205), r(512, 205, 256, 205), r(768, 205, 256, 205)],
+    hongkong: [r(0, 410, 256, 205), r(256, 410, 256, 205), r(512, 410, 256, 205), r(768, 410, 256, 205)],
+    macau: [r(0, 615, 256, 205), r(256, 615, 256, 205), r(512, 615, 256, 205), r(768, 615, 256, 205)],
+    grandcanal: [r(0, 820, 256, 204), r(256, 820, 256, 204), r(512, 820, 256, 204), r(768, 820, 256, 204)]
+  };
+
+  const chapter2ObstacleSceneByLabel = {
+    '排队人潮': 'disney',
+    '魔法人群': 'universal',
+    '港湾人潮': 'hongkong',
+    '石阶游客': 'macau',
+    '桥边人群': 'grandcanal'
+  };
+
   const assetRects = {
     candy: r(103, 364, 783, 281),
     roadblock: r(273, 283, 1502, 1471),
@@ -335,75 +534,105 @@ canvas {
   };
 
   const chapter1Events = [
-    { at: 260, type: 'story', text: '【校园体育场】午后的风掠过跑道，也把相遇吹向你们。' },
-    { at: 620, type: 'pickup', item: 'memory', y: GROUND_Y - 136 },
-    { at: 980, type: 'softObstacle', label: '赶课人群', w: 38, h: 82, y: GROUND_Y - 82 },
-    { at: 1350, type: 'pickup', item: 'heart', y: GROUND_Y - 178 },
-    { at: 1680, type: 'story', text: '那时谁也没有说破，只是把心动藏进傍晚的光里。' },
+    { at: 300, scene: 'cafeteria', type: 'story', text: '【大学食堂】军训后的饭点很吵，他第一次在人群里看见穿迷彩服的她。' },
+    { at: 760, scene: 'cafeteria', type: 'pickup', item: 'mealTray', y: GROUND_Y - 144 },
+    { at: 1120, scene: 'cafeteria', type: 'pickup', item: 'mealCard', y: GROUND_Y - 160 },
+    { at: 1480, scene: 'cafeteria', type: 'softObstacle', label: '排队队伍', w: 54, h: 92, y: GROUND_Y - 92 },
+    { at: 1840, scene: 'cafeteria', type: 'pickup', item: 'chatNote', y: GROUND_Y - 166 },
+    { at: 2180, scene: 'cafeteria', type: 'story', text: '她端着餐盘回头笑了一下，第一章就从这一眼开始。' },
 
-    { at: 2180, type: 'story', text: '【大学食堂】人声和饭香之间，你们第一次坐进彼此的青春。' },
-    { at: 2500, type: 'pickup', item: 'memory', y: GROUND_Y - 140 },
-    { at: 2860, type: 'softObstacle', label: '排队队伍', w: 36, h: 76, y: GROUND_Y - 76 },
-    { at: 3250, type: 'pickup', item: 'rose', y: GROUND_Y - 168 },
-    { at: 3600, type: 'story', text: '聊着聊着，青岛的海被端上了饭桌：想去看海的话，我陪你。' },
+    { at: 2640, scene: 'qingdao', type: 'story', text: '【青岛海边】后来海浪替他们记住了，那些没说出口的温柔。' },
+    { at: 3060, scene: 'qingdao', type: 'pickup', item: 'seashell', y: GROUND_Y - 144 },
+    { at: 3480, scene: 'qingdao', type: 'softObstacle', label: '海边游客', w: 54, h: 92, y: GROUND_Y - 92 },
+    { at: 3900, scene: 'qingdao', type: 'pickup', item: 'seasidePhoto', y: GROUND_Y - 170 },
+    { at: 4180, scene: 'qingdao', type: 'pickup', item: 'friedClams', y: GROUND_Y - 150 },
+    { at: 4420, scene: 'qingdao', type: 'pickup', item: 'qingdaoBarbecue', y: GROUND_Y - 150 },
+    { at: 4660, scene: 'qingdao', type: 'pickup', item: 'beachTicket', y: GROUND_Y - 158 },
+    { at: 4820, scene: 'qingdao', type: 'story', text: '海风、炒蛤蜊和路边烧烤，把那天的青岛都变成了回忆。' },
 
-    { at: 4150, type: 'story', text: '【青岛海边】后来海浪替你们记住了，那些没说出口的温柔。' },
-    { at: 4500, type: 'pickup', item: 'memory', y: GROUND_Y - 132 },
-    { at: 4890, type: 'softObstacle', label: '海边行李箱', w: 34, h: 64, y: GROUND_Y - 64 },
-    { at: 5300, type: 'pickup', item: 'heart', y: GROUND_Y - 184 },
-    { at: 5650, type: 'story', text: '海风吹过耳边，新郎轻声说：我要毕业了。' },
-
-    { at: 6250, type: 'story', text: '【毕业季校园】凤凰花开的时候，有人启程，有人仍留在校园。' },
-    { at: 6560, type: 'pickup', item: 'memory', y: GROUND_Y - 138 },
-    { at: 6920, type: 'softObstacle', label: '毕业人群', w: 38, h: 82, y: GROUND_Y - 82 },
-    { at: 7240, type: 'pickup', item: 'memory', y: GROUND_Y - 174 },
+    { at: 5020, scene: 'graduation', type: 'story', text: '【毕业季校园】凤凰花开的时候，有人启程，有人仍留在校园。' },
+    { at: 5340, scene: 'graduation', type: 'pickup', item: 'graduationPhoto', y: GROUND_Y - 160 },
+    { at: 5620, scene: 'graduation', type: 'pickup', item: 'graduationCap', y: GROUND_Y - 150 },
+    { at: 5860, scene: 'graduation', type: 'softObstacle', label: '毕业人群', w: 54, h: 92, y: GROUND_Y - 92 },
+    { at: 6040, scene: 'graduation', type: 'story', text: '他们把最后一次并肩走过的校园，好好收进回忆里。' },
     { at: CHAPTER1_END_X, type: 'goal' }
   ];
 
   const chapter2Events = [
-    { at: 300, type: 'story', text: '【上海迪士尼】烟花还没升起，甜蜜已经先亮了起来。' },
-    { at: 720, type: 'pickup', item: 'zootopiaBadge', y: GROUND_Y - 156 },
-    { at: 1120, type: 'softObstacle', label: '排队人潮', w: 40, h: 80, y: GROUND_Y - 80 },
-    { at: 1500, type: 'pickup', item: 'stellalouDoll', y: GROUND_Y - 178 },
-    { at: 1900, type: 'story', text: '疯狂动物城的徽章和星黛露玩偶，把童话装进口袋。' },
+    { at: 420, scene: 'disney', type: 'story', text: '【上海迪士尼】烟花还没升起，甜蜜已经先亮了起来。' },
+    { at: 960, scene: 'disney', type: 'pickup', item: 'winnieToast', y: GROUND_Y - 150 },
+    { at: 1420, scene: 'disney', type: 'pickup', item: 'zootopiaBadge', y: GROUND_Y - 176 },
+    { at: 1880, scene: 'disney', type: 'sceneMonster', variant: 0 },
+    { at: 2280, scene: 'disney', type: 'softObstacle', label: '排队人潮', w: 40, h: 80, y: GROUND_Y - 80 },
+    { at: 2660, scene: 'disney', type: 'pickup', item: 'pigletPizza', y: GROUND_Y - 150 },
+    { at: 3040, scene: 'disney', type: 'sceneMonster', variant: 1 },
+    { at: 3360, scene: 'disney', type: 'pickup', item: 'stellalouDoll', y: GROUND_Y - 196 },
+    { at: 3820, scene: 'disney', type: 'story', text: '疯狂动物城的徽章、星黛露玩偶和乐园小食，把第一站的甜蜜装进口袋。' },
 
-    { at: 2380, type: 'story', text: '【环球影城】穿过魔法街巷，哈利波特的风把笑声吹得很近。' },
-    { at: 2740, type: 'pickup', item: 'harryMagnet', y: GROUND_Y - 160 },
-    { at: 3140, type: 'softObstacle', label: '魔法人群', w: 42, h: 84, y: GROUND_Y - 84 },
-    { at: 3460, type: 'pickup', item: 'onePieceMagnet', y: GROUND_Y - 142 },
-    { at: 3820, type: 'softObstacle', label: '山治', w: 40, h: 88, y: GROUND_Y - 88, motion: 'bounce' },
-    { at: 4080, type: 'story', text: '哈利波特和海贼王的冰箱贴，也贴住了那天的快乐。' },
+    { at: 4460, scene: 'universal', type: 'story', text: '【环球影城】穿过魔法街巷，哈利波特的风把笑声吹得很近。' },
+    { at: 6520, scene: 'universal', type: 'pickup', item: 'butterbeer', y: GROUND_Y - 150 },
+    { at: 6900, scene: 'universal', type: 'pickup', item: 'harryMagnet', y: GROUND_Y - 180 },
+    { at: 7280, scene: 'universal', type: 'sceneMonster', variant: 0 },
+    { at: 7660, scene: 'universal', type: 'softObstacle', label: '魔法人群', w: 42, h: 84, y: GROUND_Y - 84 },
+    { at: 8020, scene: 'universal', type: 'pickup', item: 'luffyBeefRice', y: GROUND_Y - 150 },
+    { at: 8320, scene: 'universal', type: 'pickup', item: 'onePieceMagnet', y: GROUND_Y - 164 },
+    { at: 8580, scene: 'universal', type: 'sceneMonster', variant: 1 },
+    { at: 8760, scene: 'universal', type: 'softObstacle', label: '山治', w: 72, h: 112, y: GROUND_Y - 112 },
+    { at: 8840, scene: 'universal', type: 'story', text: '黄油啤酒、草帽牛肉饭和冰箱贴，也贴住了那天的快乐。' },
 
-    { at: 4420, type: 'story', text: '【香港维多利亚港】夜色落在海面，也落在她挑中的发财款哈奇猫上。' },
-    { at: 4800, type: 'pickup', item: 'luckyCat', y: GROUND_Y - 146 },
-    { at: 5200, type: 'softObstacle', label: '港湾人潮', w: 40, h: 78, y: GROUND_Y - 78 },
-    { at: 5580, type: 'pickup', item: 'heart', y: GROUND_Y - 180 },
-    { at: 5960, type: 'story', text: '那只发财款哈奇猫，被你们买成了认真喜欢的证据。' },
+    { at: 8960, scene: 'hongkong', type: 'story', text: '【香港维多利亚港】夜色落在海面，也落在她挑中的发财款哈奇猫上。' },
+    { at: 10980, scene: 'hongkong', type: 'pickup', item: 'wontonNoodles', y: GROUND_Y - 150 },
+    { at: 11340, scene: 'hongkong', type: 'sceneMonster', variant: 0 },
+    { at: 11680, scene: 'hongkong', type: 'pickup', item: 'luckyCat', y: GROUND_Y - 168 },
+    { at: 11960, scene: 'hongkong', type: 'softObstacle', label: '港湾人潮', w: 40, h: 78, y: GROUND_Y - 78 },
+    { at: 12180, scene: 'hongkong', type: 'pickup', item: 'boatCongee', y: GROUND_Y - 150 },
+    { at: 12380, scene: 'hongkong', type: 'sceneMonster', variant: 1 },
+    { at: 12560, scene: 'hongkong', type: 'pickup', item: 'roastGoose', y: GROUND_Y - 150 },
+    { at: 12620, scene: 'hongkong', type: 'story', text: '维港边的云吞面、艇仔粥和烧鹅，让认真喜欢变得越来越确定。' },
 
-    { at: 6460, type: 'story', text: '【澳门大三巴】石阶前的风很慢，挂件轻轻晃着新的答案。' },
-    { at: 6820, type: 'pickup', item: 'catCharm', y: GROUND_Y - 142 },
-    { at: 7220, type: 'softObstacle', label: '石阶游客', w: 40, h: 80, y: GROUND_Y - 80 },
-    { at: 7560, type: 'pickup', item: 'rose', y: GROUND_Y - 168 },
-    { at: 7900, type: 'story', text: '走过这么多地方，她终于把喜欢说成了答应。' },
+    { at: 12720, scene: 'macau', type: 'story', text: '【澳门大三巴】石阶前的风很慢，蛋挞小八也把回忆变得很甜。' },
+    { at: 14720, scene: 'macau', type: 'pickup', item: 'steak', y: GROUND_Y - 150 },
+    { at: 15080, scene: 'macau', type: 'sceneMonster', variant: 0 },
+    { at: 15420, scene: 'macau', type: 'pickup', item: 'eggTartHachiware', y: GROUND_Y - 176 },
+    { at: 15720, scene: 'macau', type: 'pickup', item: 'porkChopBun', y: GROUND_Y - 150 },
+    { at: 16000, scene: 'macau', type: 'softObstacle', label: '石阶游客', w: 40, h: 80, y: GROUND_Y - 80 },
+    { at: 16200, scene: 'macau', type: 'pickup', item: 'eggTart', y: GROUND_Y - 150 },
+    { at: 16380, scene: 'macau', type: 'sceneMonster', variant: 1 },
+    { at: 16460, scene: 'macau', type: 'story', text: '大三巴前的合影和澳门小食，让那句想说的话又靠近了一点。' },
+
+    { at: 16580, scene: 'grandcanal', type: 'story', text: '【北京通州大运河】水光从桥下铺开，他把想说的话认真放进心里。' },
+    { at: 18580, scene: 'grandcanal', type: 'pickup', item: 'doumiHotpot', y: GROUND_Y - 150 },
+    { at: 18920, scene: 'grandcanal', type: 'sceneMonster', variant: 0 },
+    { at: 19240, scene: 'grandcanal', type: 'pickup', item: 'sushiro', y: GROUND_Y - 150 },
+    { at: 19520, scene: 'grandcanal', type: 'softObstacle', label: '桥边人群', w: 40, h: 80, y: GROUND_Y - 80 },
+    { at: 19800, scene: 'grandcanal', type: 'pickup', item: 'goldPendant', y: GROUND_Y - 200 },
+    { at: 20060, scene: 'grandcanal', type: 'sceneMonster', variant: 1 },
+    { at: 20280, scene: 'grandcanal', type: 'pickup', item: 'skewers', y: GROUND_Y - 150 },
+    { at: 20420, scene: 'grandcanal', type: 'story', text: '他把一路收集的回忆和金色挂坠一起捧到她面前。' },
     { at: CHAPTER2_END_X, type: 'goal' }
   ];
 
   const weddingEvents = [
-    { at: 520, type: 'roadblock' },
-    { at: 760, type: 'redPacket' },
-    { at: 1010, type: 'pickup', item: 'redPacket' },
-    { at: 1240, type: 'redPacket' },
-    { at: 1500, type: 'roadblock' },
-    { at: 1790, type: 'balloon' },
-    { at: 2050, type: 'pickup', item: 'ring' },
-    { at: 2320, type: 'redPacket' },
-    { at: 2580, type: 'roadblock' },
-    { at: 2860, type: 'pickup', item: 'memory' },
-    { at: 3140, type: 'redPacket' },
-    { at: 3420, type: 'balloon' },
-    { at: WEDDING_BOSS_X, type: 'boss' },
-    { at: 4550, type: 'pickup', item: 'heart' },
-    { at: 4950, type: 'roadblock' },
+    { at: 260, scene: 'weddingStreet', type: 'story', text: '【迎亲街区】喜字和灯笼一路亮起，新郎出发去接她。' },
+    { at: 620, scene: 'weddingStreet', type: 'pickup', item: 'redPacket', y: GROUND_Y - 132 },
+    { at: 900, scene: 'weddingStreet', type: 'redPacket' },
+    { at: 1180, scene: 'weddingStreet', type: 'softObstacle', label: '接亲亲友', w: 42, h: 84, y: GROUND_Y - 84 },
+    { at: 1480, scene: 'weddingStreet', type: 'roadblock' },
+    { at: 1740, scene: 'weddingStreet', type: 'pickup', item: 'memory', y: GROUND_Y - 150 },
+    { at: 1980, scene: 'weddingStreet', type: 'story', text: '红包、笑声和祝福把这条路铺得热热闹闹。' },
+
+    { at: 2240, scene: 'weddingGarden', type: 'story', text: '【婚礼花园】花瓣落在路边，花门已经越来越近。' },
+    { at: 2520, scene: 'weddingGarden', type: 'balloon' },
+    { at: 2800, scene: 'weddingGarden', type: 'pickup', item: 'ring', y: GROUND_Y - 176 },
+    { at: 3080, scene: 'weddingGarden', type: 'softObstacle', label: '花童队伍', w: 42, h: 82, y: GROUND_Y - 82 },
+    { at: 3340, scene: 'weddingGarden', type: 'redPacket' },
+    { at: 3660, scene: 'weddingGarden', type: 'story', text: '捧花、戒指和掌声，都在等最后那一步。' },
+
+    { at: WEDDING_BOSS_X, scene: 'weddingPalace', type: 'boss' },
+    { at: 4200, scene: 'weddingPalace', type: 'story', text: '【美泉宫花门】堵车怪挡在最后一段路前，婚礼倒计时还在继续。' },
+    { at: 4460, scene: 'weddingPalace', type: 'pickup', item: 'redPacket', y: GROUND_Y - 132 },
+    { at: 4740, scene: 'weddingPalace', type: 'softObstacle', label: '宾客人潮', w: 42, h: 84, y: GROUND_Y - 84 },
+    { at: 5020, scene: 'weddingPalace', type: 'pickup', item: 'heart', y: GROUND_Y - 178 },
     { at: WEDDING_END_X, type: 'goal' }
   ];
 
@@ -414,7 +643,7 @@ canvas {
       title: '第一章：相识',
       shortTitle: '相识',
       subtitle: '大学食堂第一次见面',
-      description: '从操场风里走向食堂初见，再陪她去青岛看海，最后在毕业季校园告别。',
+      description: '从大学食堂第一次见面开始，再一起去青岛看海，最后在毕业季校园认真告别。',
       playable: true,
       timeLimit: 210,
       endX: CHAPTER1_END_X,
@@ -423,7 +652,7 @@ canvas {
       timerLabel: '回忆倒计时',
       actionLabel: '走向毕业季',
       completeTitle: '第一章完成',
-      completeTagline: '食堂的初见、青岛的海风、毕业季的告别，都成了最温柔的开始。',
+      completeTagline: '食堂里穿迷彩服的第一眼、青岛的海风和毕业季的告别，都成了最温柔的开始。',
       gameOverMessage: '回忆倒计时结束了。',
       goalKind: 'farewell',
       hasBoss: false
@@ -434,16 +663,16 @@ canvas {
       title: '第二章：相恋',
       shortTitle: '相恋',
       subtitle: '旅行约会',
-      description: '从上海迪士尼到环球影城，再到香港维港和澳门大三巴，收集徽章、玩偶、冰箱贴和哈奇猫周边。',
+      description: '从上海迪士尼到环球影城，再到香港维港、澳门大三巴和北京通州大运河，收集徽章、玩偶、冰箱贴、哈奇猫周边和金色挂坠。',
       playable: true,
-      timeLimit: 220,
+      timeLimit: 390,
       endX: CHAPTER2_END_X,
       events: chapter2Events,
       countLabel: '周边',
       timerLabel: '约会倒计时',
       actionLabel: '开始约会',
       completeTitle: '第二章完成',
-      completeTagline: '徽章、玩偶、冰箱贴和哈奇猫周边，终于把喜欢走成了在一起。',
+      completeTagline: '徽章、玩偶、冰箱贴、哈奇猫周边和金色挂坠，终于在通州大运河边把一路喜欢说成了在一起。',
       gameOverMessage: '约会的脚步暂时慢了下来。',
       goalKind: 'love',
       hasBoss: false
@@ -463,7 +692,7 @@ canvas {
       title: '第四章：迎亲结婚',
       shortTitle: '迎亲结婚',
       subtitle: '婚礼倒计时',
-      description: '穿过婚礼大道，击败堵车怪，准时抵达花门。',
+      description: '穿过迎亲街区、婚礼花园和美泉宫花门，击败堵车怪，准时抵达婚礼现场。',
       playable: true,
       timeLimit: 180,
       endX: WEDDING_END_X,
@@ -473,7 +702,7 @@ canvas {
       timerLabel: '婚礼倒计时',
       actionLabel: '开始迎亲',
       completeTitle: '婚礼准时开始！',
-      completeTagline: '新郎成功抵达，新娘正在花门前等待。',
+      completeTagline: '穿过迎亲街区、婚礼花园和美泉宫花门，新郎终于准时走到新娘面前。',
       gameOverMessage: '婚礼倒计时结束了。',
       goalKind: 'wedding',
       hasBoss: true
@@ -481,6 +710,24 @@ canvas {
   };
 
   const chapterOrder = ['chapter1', 'chapter2', 'chapter3', 'wedding'];
+
+  const chapter2MusicTracks = {
+    disney: { src: 'assets/Try Everything-(电影《疯狂动物城》主题曲)-Shakira.mp3', start: 10, end: 58 },
+    universal: { src: 'assets/哈利波特背景音乐.mp3', start: 0, end: 44 },
+    hongkong: { src: 'assets/一生中最爱(Live) - 轻音乐网.mp3', start: 82, end: 130 },
+    macau: { src: 'assets/澳门七子之歌.mp3', start: 8, end: 56 },
+    grandcanal: { src: 'assets/大运河.flac', start: 18, end: 66 }
+  };
+
+  const music = {
+    current: null,
+    currentSceneId: null,
+    pending: null,
+    enabled: false,
+    volume: .36,
+    fadeDuration: 1,
+    fadeTime: 0
+  };
 
   const game = {
     mode: 'loading',
@@ -505,7 +752,11 @@ canvas {
     ceremonyAssetsReady: false,
     assetPromises: {},
     screenShake: 0,
-    message: ''
+    message: '',
+    currentOutfitKey: 'groom',
+    previousOutfitKey: 'groom',
+    outfitTransitionTime: 0,
+    outfitTransitionDuration: .8
   };
 
   const player = {
@@ -531,6 +782,94 @@ canvas {
   function currentChapter() { return chapters[game.currentChapterId] || chapters.chapter1; }
   function isChapterOne() { return currentChapter().id === 'chapter1'; }
   function isChapterTwo() { return currentChapter().id === 'chapter2'; }
+
+  function currentGroomOutfitKey() {
+    if (!isChapterTwo()) return 'groom';
+    const scene = currentSceneInfo();
+    if (scene.id === 'disney') return 'groomCh2Disney';
+    if (scene.id === 'universal') return 'groomCh2Universal';
+    if (scene.id === 'grandcanal') return 'groomCh2GrandCanal';
+    return 'groomCh2HkMacau';
+  }
+
+  function updateOutfitTransition(dt) {
+    const key = currentGroomOutfitKey();
+    if (key !== game.currentOutfitKey) {
+      game.previousOutfitKey = game.currentOutfitKey;
+      game.currentOutfitKey = key;
+      game.outfitTransitionTime = game.outfitTransitionDuration;
+    }
+    game.outfitTransitionTime = Math.max(0, game.outfitTransitionTime - dt);
+  }
+
+  function ensureMusicEnabled() {
+    music.enabled = true;
+    if (game.mode === 'playing') updateMusic(0);
+  }
+
+  function stopMusic() {
+    for (const audio of [music.current, music.pending]) {
+      if (!audio) continue;
+      audio.pause();
+      audio.volume = 0;
+    }
+    music.current = null;
+    music.pending = null;
+    music.currentSceneId = null;
+    music.fadeTime = 0;
+  }
+
+  function createMusicAudio(track) {
+    const audio = new Audio(track.src);
+    audio.loop = false;
+    audio.preload = 'auto';
+    audio.volume = 0;
+    audio.currentTime = track.start;
+    audio.dataset.start = String(track.start);
+    audio.dataset.end = String(track.end);
+    audio.addEventListener('timeupdate', () => {
+      const end = Number(audio.dataset.end) || 0;
+      const start = Number(audio.dataset.start) || 0;
+      if (end && audio.currentTime >= end) audio.currentTime = start;
+    });
+    return audio;
+  }
+
+  function switchChapter2Music(sceneId) {
+    const track = chapter2MusicTracks[sceneId];
+    if (!track) {
+      stopMusic();
+      return;
+    }
+    if (music.currentSceneId === sceneId) return;
+    const next = createMusicAudio(track);
+    music.pending = next;
+    music.currentSceneId = sceneId;
+    music.fadeTime = 0;
+    next.play().catch(() => {});
+  }
+
+  function updateMusic(dt) {
+    if (!music.enabled) return;
+    if (game.mode !== 'playing' || !isChapterTwo() || game.ceremony) {
+      stopMusic();
+      return;
+    }
+    switchChapter2Music(currentSceneInfo().id);
+    if (!music.pending) {
+      if (music.current) music.current.volume = music.volume;
+      return;
+    }
+    music.fadeTime = Math.min(music.fadeDuration, music.fadeTime + dt);
+    const t = music.fadeDuration ? music.fadeTime / music.fadeDuration : 1;
+    if (music.current) music.current.volume = music.volume * (1 - t);
+    music.pending.volume = music.volume * t;
+    if (t >= 1) {
+      if (music.current) music.current.pause();
+      music.current = music.pending;
+      music.pending = null;
+    }
+  }
 
   function loadAssets() {
     const entries = Object.entries({ ...manifest, ...ceremonyManifest });
@@ -621,7 +960,28 @@ canvas {
     return game.assetPromises.__ceremony;
   }
 
+  function hideSuccessVideo() {
+    successVideo.pause();
+    successVideo.classList.remove('show');
+    successVideo.currentTime = 0;
+  }
+
+  function playSuccessVideo() {
+    successVideo.currentTime = 0;
+    successVideo.classList.add('show');
+    successVideo.play().catch(() => {
+      successVideo.muted = true;
+      successVideo.play().catch(() => setMode('win'));
+    });
+  }
+
+  successVideo.addEventListener('ended', () => {
+    successVideo.classList.remove('show');
+    if (game.ceremony?.kind === 'wedding') setMode('win');
+  });
+
   function resetGame(chapterId = game.currentChapterId) {
+    hideSuccessVideo();
     game.currentChapterId = chapters[chapterId]?.playable ? chapterId : 'chapter1';
     const chapter = currentChapter();
     game.cameraX = 0;
@@ -640,6 +1000,9 @@ canvas {
     game.ceremony = null;
     game.screenShake = 0;
     game.message = '';
+    game.currentOutfitKey = chapter.id === 'chapter2' ? 'groomCh2Disney' : 'groom';
+    game.previousOutfitKey = game.currentOutfitKey;
+    game.outfitTransitionTime = 0;
     player.x = 210;
     player.y = GROUND_Y - player.h;
     player.vx = 0;
@@ -660,6 +1023,7 @@ canvas {
   }
 
   function setMode(mode) {
+    if (mode !== 'playing') successVideo.classList.remove('show');
     game.mode = mode;
     updateOverlay();
   }
@@ -756,7 +1120,7 @@ canvas {
       const nextHint = chapter.id === 'chapter1'
         ? '<p>第二章「相恋」已经开启，可以继续去旅行约会。</p>'
         : (chapter.id === 'chapter2' ? '<p>第三章「订婚」还在准备中，你可以先体验最终章「迎亲结婚」。</p>' : '');
-      const ceremonyHint = chapter.id === 'wedding' ? '<p>结尾已经播放了 8 帧婚礼仪式动画：进场、牵手、交换戒指，到最终合影。</p>' : '';
+      const ceremonyHint = chapter.id === 'wedding' ? '<p>结尾已经播放了婚礼仪式动画和求婚成功视频。</p>' : '';
       overlay.classList.add('show');
       overlay.innerHTML = `
         <div class="menu-card">
@@ -800,6 +1164,7 @@ canvas {
   overlay.addEventListener('click', event => {
     const button = event.target.closest('[data-action]');
     if (!button) return;
+    ensureMusicEnabled();
     const action = button.dataset.action;
     if (action === 'start' || action === 'restart') startGame(game.currentChapterId);
     if (action === 'start-chapter') startGame(button.dataset.chapter || 'chapter1');
@@ -811,11 +1176,18 @@ canvas {
     if (action === 'resume') setMode('playing');
     if (action === 'menu') setMode('menu');
     if (action === 'help') {
-      overlay.querySelector('.tips')?.insertAdjacentHTML('beforeend', '<span>小技巧：第一章收集回忆碎片，最终章 Boss 出现后多撒几颗喜糖就能让婚车通行。</span>');
+      const tips = overlay.querySelector('.tips');
+      const extra = overlay.querySelector('[data-help-extra]');
+      if (extra) {
+        extra.remove();
+      } else {
+        tips?.insertAdjacentHTML('beforeend', '<span data-help-extra>小技巧：第一章收集回忆碎片；第二章收集旅行纪念物；最终章 Boss 出现后多撒几颗喜糖就能让婚车通行。</span>');
+      }
     }
   });
 
   window.addEventListener('keydown', event => {
+    ensureMusicEnabled();
     const code = event.code;
     keys[code] = true;
     if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(code)) event.preventDefault();
@@ -847,6 +1219,7 @@ canvas {
   });
 
   function update(dt) {
+    updateMusic(dt);
     if (game.mode !== 'playing') return;
 
     const chapter = currentChapter();
@@ -897,6 +1270,7 @@ canvas {
     let scrollSpeed = RUN_SPEED + (moveRight ? 80 : 0) - (moveLeft ? 24 : 0);
     if (nearBossGate) scrollSpeed = Math.min(scrollSpeed, 38);
     game.cameraX = Math.min(chapter.endX - 260, game.cameraX + scrollSpeed * dt);
+    updateOutfitTransition(dt);
 
     spawnEvents();
     updateEntities(dt);
@@ -933,19 +1307,24 @@ canvas {
       w: 46,
       h: 24,
       vx: 760,
-      life: 1.15
+      life: 1.15,
+      maxLife: 1.15,
+      scene: isChapterTwo() ? currentSceneInfo().id : null
     });
   }
 
   function spawnEvents() {
     const chapter = currentChapter();
+    const scene = currentSceneInfo();
     while (game.eventIndex < chapter.events.length) {
       const event = chapter.events[game.eventIndex];
+      if (isChapterTwo() && event.scene && event.scene !== scene.id) break;
       const triggerDistance = event.type === 'story' ? 260 : W + 260;
       if (event.at >= game.cameraX + triggerDistance) break;
       game.eventIndex += 1;
       if (event.type === 'roadblock') spawnRoadblock(event.at);
       if (event.type === 'softObstacle') spawnSoftObstacle(event.at, event);
+      if (event.type === 'sceneMonster') spawnSceneMonster(event.at, event);
       if (event.type === 'redPacket') spawnRedPacket(event.at);
       if (event.type === 'balloon') spawnBalloon(event.at);
       if (event.type === 'pickup') spawnPickup(event.at, event.item, event.y);
@@ -975,6 +1354,29 @@ canvas {
     });
   }
 
+  function spawnSceneMonster(worldX, event = {}) {
+    const scene = event.scene || currentSceneInfo().id;
+    const labels = chapter2SceneMonsterLabels[scene] || ['场景小怪'];
+    const variant = event.variant || 0;
+    const w = event.w || 72;
+    const h = event.h || 82;
+    game.entities.push({
+      type: 'sceneMonster',
+      scene,
+      variant,
+      label: event.label || labels[variant % labels.length],
+      worldX,
+      y: event.y ?? GROUND_Y - h,
+      baseY: event.y ?? GROUND_Y - h,
+      w,
+      h,
+      hp: 1,
+      vx: -16,
+      animTime: 0,
+      hitTimer: 0
+    });
+  }
+
   function spawnRedPacket(worldX, y = GROUND_Y - 82) {
     game.entities.push({ type: 'redPacket', worldX, y, w: 74, h: 82, hp: 1, vx: -24, animTime: 0, hitTimer: 0 });
   }
@@ -985,7 +1387,8 @@ canvas {
 
   function spawnPickup(worldX, item, y) {
     const defaultY = item === 'heart' || item === 'ring' ? GROUND_Y - 170 : GROUND_Y - 122;
-    game.entities.push({ type: 'pickup', item, worldX, y: y ?? defaultY, w: 52, h: 52, animTime: 0 });
+    const size = chapter2CollectibleItems.includes(item) ? 92 : (chapter2FoodCollectibleItems.includes(item) ? 88 : 52);
+    game.entities.push({ type: 'pickup', item, worldX, y: y ?? defaultY, w: size, h: size, animTime: 0 });
   }
 
   function spawnBoss(worldX) {
@@ -1039,7 +1442,10 @@ canvas {
         addFloatText(520, 318, '婚礼开始！', '#ffd36a');
       }
       if (Math.random() < dt * 24) sparkle(640 + (Math.random() - .5) * 520, 240 + Math.random() * 220, '#ffd36a');
-      if (c.time > WEDDING_CEREMONY_DURATION) setMode('win');
+      if (c.time > WEDDING_CEREMONY_DURATION && !c.videoStarted) {
+        c.videoStarted = true;
+        playSuccessVideo();
+      }
       return;
     }
 
@@ -1055,7 +1461,8 @@ canvas {
         burstConfetti(640, 330, 90);
         addFloatText(520, 318, c.kind === 'farewell' ? '相识完成！' : '确定恋爱！', '#ffd36a');
       }
-      if (c.time > (c.kind === 'farewell' ? 5.8 : 5.6)) setMode('win');
+      const finishTime = c.kind === 'farewell' ? 5.8 : 9.5;
+      if (c.time > finishTime) setMode('win');
     }
   }
 
@@ -1068,6 +1475,7 @@ canvas {
       entity.animTime = (entity.animTime || 0) + dt;
       if (entity.vx) entity.worldX += entity.vx * dt;
       if (entity.type === 'balloon') entity.y = entity.baseY + Math.sin(entity.animTime * 3.3) * 18;
+      if (entity.type === 'sceneMonster') entity.y = entity.baseY + Math.sin(entity.animTime * 4.2) * 5;
       if (entity.type === 'softObstacle') {
         const amp = entity.motion === 'bounce' ? 24 : 3;
         const freq = entity.motion === 'bounce' ? 8 : 3;
@@ -1118,7 +1526,7 @@ canvas {
     for (const bullet of game.bullets) {
       const bh = { x: bullet.worldX - game.cameraX, y: bullet.y, w: bullet.w, h: bullet.h };
       for (const entity of game.entities) {
-        if (!['redPacket', 'balloon'].includes(entity.type) || entity.dead) continue;
+        if (!['redPacket', 'balloon', 'sceneMonster'].includes(entity.type) || entity.dead) continue;
         if (hit(bh, entityHitbox(entity))) {
           bullet.life = 0;
           entity.hp -= 1;
@@ -1126,9 +1534,10 @@ canvas {
           sparkle(bh.x + 20, bh.y + 10, '#ffd36a');
           if (entity.hp <= 0) {
             entity.dead = true;
-            game.score += entity.type === 'balloon' ? 150 : 100;
+            const points = entity.type === 'balloon' ? 150 : (entity.type === 'sceneMonster' ? 180 : 100);
+            game.score += points;
             game.redPackets += entity.type === 'redPacket' ? 1 : 0;
-            addFloatText(entity.worldX - game.cameraX, entity.y, '+100', '#ffd36a');
+            addFloatText(entity.worldX - game.cameraX, entity.y, `+${points}`, '#ffd36a');
             burstConfetti(entity.worldX - game.cameraX + entity.w / 2, entity.y + 30, 16);
           }
         }
@@ -1155,10 +1564,10 @@ canvas {
       if (entity.type === 'pickup' && hit(ph, entityHitbox(entity))) {
         collectPickup(entity);
         entity.dead = true;
-      } else if (['redPacket', 'balloon', 'roadblock', 'softObstacle'].includes(entity.type) && hit(ph, entityHitbox(entity))) {
+      } else if (['redPacket', 'balloon', 'roadblock', 'softObstacle', 'sceneMonster'].includes(entity.type) && hit(ph, entityHitbox(entity))) {
         const message = entity.type === 'softObstacle'
           ? `被${entity.label}轻轻拦了一下。`
-          : (entity.type === 'roadblock' ? '撞到婚礼路障了。' : '被闹关小怪拦住了。');
+          : (entity.type === 'sceneMonster' ? `被${entity.label || '场景小怪'}拦住了。` : (entity.type === 'roadblock' ? '撞到婚礼路障了。' : '被闹关小怪拦住了。'));
         damagePlayer(message);
       }
     }
@@ -1183,17 +1592,53 @@ canvas {
       game.memoryFragments += 1;
       game.score += 160;
       addFloatText(entity.worldX - game.cameraX, entity.y, isChapterTwo() ? '甜蜜+1' : '回忆+1', '#ffb3c8');
-    } else if (['zootopiaBadge', 'stellalouDoll', 'harryMagnet', 'onePieceMagnet', 'luckyCat', 'catCharm'].includes(entity.item)) {
+    } else if (chapter1CollectibleItems.includes(entity.item)) {
+      const labels = {
+        mealTray: '餐盘回忆+1',
+        mealCard: '校园饭卡+1',
+        milkTea: '奶茶+1',
+        chatNote: '聊天纸条+1',
+        seashell: '贝壳+1',
+        seasidePhoto: '海边拍立得+1',
+        beachTicket: '海边票根+1',
+        friedClams: '炒蛤蜊+1',
+        qingdaoBarbecue: '青岛烧烤+1',
+        graduationPhoto: '毕业合影+1',
+        graduationCap: '学位帽+1',
+        schoolBadge: '校徽+1',
+        chapter1Rose: '玫瑰+1',
+        chapter1Heart: '心动+1'
+      };
+      game.memoryFragments += 1;
+      game.score += 200;
+      addFloatText(entity.worldX - game.cameraX, entity.y, labels[entity.item] || '回忆+1', '#ffd36a');
+    } else if (chapter2AllCollectibleItems.includes(entity.item)) {
       const labels = {
         zootopiaBadge: '疯狂动物城徽章+1',
         stellalouDoll: '星黛露玩偶+1',
         harryMagnet: '哈利波特冰箱贴+1',
         onePieceMagnet: '海贼王冰箱贴+1',
         luckyCat: '发财款哈奇猫+1',
-        catCharm: '哈奇猫挂件+1'
+        eggTartHachiware: '蛋挞哈奇猫+1',
+        goldPendant: '金色挂坠+1',
+        winnieToast: '维尼吐司+1',
+        pigletPizza: '皮杰披萨+1',
+        luffyBeefRice: '草帽牛肉饭+1',
+        butterbeer: '黄油啤酒+1',
+        mickeySnack: '米奇甜点+1',
+        popcorn: '爆米花+1',
+        wontonNoodles: '云吞面+1',
+        boatCongee: '艇仔粥+1',
+        roastGoose: '烧鹅+1',
+        steak: '牛排+1',
+        porkChopBun: '猪扒包+1',
+        eggTart: '蛋挞+1',
+        doumiHotpot: '豆米火锅+1',
+        sushiro: '寿司郎+1',
+        skewers: '烤串+1'
       };
       game.memoryFragments += 1;
-      game.score += 260;
+      game.score += chapter2FoodCollectibleItems.includes(entity.item) ? 180 : 260;
       addFloatText(entity.worldX - game.cameraX, entity.y, labels[entity.item], '#ffd36a');
     }
     sparkle(entity.worldX - game.cameraX + 24, entity.y + 24, '#ffd36a');
@@ -1222,8 +1667,12 @@ canvas {
   function entityHitbox(entity) {
     const x = entity.worldX - game.cameraX;
     if (entity.type === 'roadblock') return { x: x + 14, y: entity.y + 18, w: Math.max(12, entity.w - 28), h: Math.max(28, entity.h - 26) };
-    if (entity.type === 'softObstacle') return { x: x + 22, y: entity.y + 24, w: Math.max(10, entity.w - 44), h: Math.max(30, entity.h - 32) };
+    if (entity.type === 'softObstacle') {
+      if (entity.label === '山治') return { x: x + 2, y: entity.y + 8, w: 68, h: 96 };
+      return { x: x + 22, y: entity.y + 24, w: Math.max(10, entity.w - 44), h: Math.max(30, entity.h - 32) };
+    }
     if (entity.type === 'pickup') return { x: x + 6, y: entity.y + 6, w: entity.w - 12, h: entity.h - 12 };
+    if (entity.type === 'sceneMonster') return { x: x + 10, y: entity.y + 12, w: Math.max(34, entity.w - 20), h: Math.max(44, entity.h - 18) };
     return { x: x + entity.w * .18, y: entity.y + entity.h * .14, w: entity.w * .64, h: entity.h * .72 };
   }
 
@@ -1301,14 +1750,17 @@ canvas {
       return;
     }
     drawScrollingBackground();
-    drawChapterBrideMoments();
     drawGoal();
-    drawEntities();
-    drawBoss();
-    drawBullets();
-    drawPlayer();
+    if (!(game.ceremony && game.ceremony.kind === 'love')) {
+      drawChapterBrideMoments();
+      drawEntities();
+      drawBoss();
+      drawBullets();
+      drawPlayer();
+    }
     drawParticles();
     drawSceneLabel();
+    drawSceneTransition();
     if (DEBUG_HITBOXES) drawDebugHitboxes();
   }
 
@@ -1330,6 +1782,10 @@ canvas {
       drawTravelBackground();
       return;
     }
+    if (currentChapter().id === 'wedding') {
+      drawWeddingBackground();
+      return;
+    }
 
     const bg = img('streetBg');
     if (!bg) {
@@ -1348,45 +1804,232 @@ canvas {
 
   function drawCampusBackground() {
     const scene = currentSceneInfo();
-    if (scene.id === 'sports') drawSportsFieldScene(scene.localProgress);
-    else if (scene.id === 'cafeteria') drawCafeteriaScene(scene.localProgress);
-    else if (scene.id === 'qingdao') drawQingdaoScene(scene.localProgress);
-    else drawGraduationScene(scene.localProgress);
+    if (!drawChapterOneImageScene(scene)) {
+      if (scene.id === 'cafeteria') drawCafeteriaScene(scene.localProgress);
+      else if (scene.id === 'qingdao') drawQingdaoScene(scene.localProgress);
+      else drawGraduationScene(scene.localProgress);
+    }
 
-    ctx.fillStyle = 'rgba(255,255,255,.08)';
+    ctx.fillStyle = 'rgba(255,255,255,.04)';
     ctx.fillRect(0, 0, W, H);
+  }
+
+  function drawChapterOneImageScene(scene) {
+    const keyMap = {
+      cafeteria: 'bgCh1Cafeteria',
+      qingdao: 'bgCh1Qingdao',
+      graduation: 'bgCh1Graduation'
+    };
+    const image = img(keyMap[scene.id]);
+    if (!image) return false;
+    drawImageCover(image, 0, 0, W, H);
+    const offset = -((game.cameraX * .14) % 104);
+    ctx.fillStyle = 'rgba(255,255,255,.05)';
+    for (let x = offset; x < W + 104; x += 104) {
+      ctx.fillRect(x, GROUND_Y - 2, 52, 3);
+    }
+    return true;
   }
 
   function drawTravelBackground() {
     const scene = currentSceneInfo();
-    if (scene.id === 'disney') drawDisneyScene(scene.localProgress);
-    else if (scene.id === 'universal') drawUniversalScene(scene.localProgress);
-    else if (scene.id === 'hongkong') drawHongKongScene(scene.localProgress);
-    else drawMacauScene(scene.localProgress);
+    if (!drawTravelImageScene(scene)) {
+      if (scene.id === 'disney') drawDisneyScene(scene.localProgress);
+      else if (scene.id === 'universal') drawUniversalScene(scene.localProgress);
+      else if (scene.id === 'hongkong') drawHongKongScene(scene.localProgress);
+      else if (scene.id === 'macau') drawMacauScene(scene.localProgress);
+      else drawGrandCanalScene(scene.localProgress);
+    }
 
-    ctx.fillStyle = 'rgba(255,255,255,.07)';
+    ctx.fillStyle = 'rgba(255,255,255,.04)';
     ctx.fillRect(0, 0, W, H);
+  }
+
+  function drawTravelImageScene(scene) {
+    const keyMap = {
+      disney: 'bgDisney',
+      universal: 'bgUniversal',
+      hongkong: 'bgHongKong',
+      macau: 'bgMacau',
+      grandcanal: 'bgGrandCanal'
+    };
+    const image = img(keyMap[scene.id]);
+    if (!image) return false;
+    drawImageCover(image, 0, 0, W, H);
+    const offset = -((game.cameraX * .12) % 96);
+    ctx.fillStyle = 'rgba(255,255,255,.05)';
+    for (let x = offset; x < W + 96; x += 96) {
+      ctx.fillRect(x, GROUND_Y - 2, 48, 3);
+    }
+    return true;
+  }
+
+  function drawWeddingBackground() {
+    const scene = currentSceneInfo();
+    if (scene.id === 'weddingStreet') drawWeddingStreetScene(scene.localProgress);
+    else if (scene.id === 'weddingGarden') drawWeddingGardenScene(scene.localProgress);
+    else drawWeddingPalaceScene(scene.localProgress);
+    ctx.fillStyle = 'rgba(255, 247, 249, .05)';
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  function drawWeddingStreetScene(t) {
+    const bg = img('streetBg');
+    if (bg) {
+      const offset = -((game.cameraX * .62) % W);
+      ctx.drawImage(bg, offset, 0, W, H);
+      ctx.drawImage(bg, offset + W, 0, W, H);
+      if (offset > 0) ctx.drawImage(bg, offset - W, 0, W, H);
+      ctx.fillStyle = 'rgba(86, 9, 32, .28)';
+      ctx.fillRect(0, 0, W, H);
+    } else {
+      drawSoftSky('#e85d74', '#ffd3a8');
+    }
+    const bannerOffset = -((game.cameraX * .28) % 220);
+    for (let x = bannerOffset - 120; x < W + 220; x += 220) {
+      ctx.strokeStyle = 'rgba(255, 236, 184, .75)';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(x, 128);
+      ctx.quadraticCurveTo(x + 110, 158 + Math.sin(t * Math.PI) * 4, x + 220, 128);
+      ctx.stroke();
+      ctx.fillStyle = '#d82742';
+      roundRect(x + 42, 132, 34, 44, 10, true);
+      roundRect(x + 148, 132, 34, 44, 10, true);
+      ctx.fillStyle = '#ffd36a';
+      ctx.font = '900 18px -apple-system, BlinkMacSystemFont, sans-serif';
+      ctx.fillText('囍', x + 50, 160);
+      ctx.fillText('囍', x + 156, 160);
+    }
+    ctx.fillStyle = 'rgba(255, 211, 106, .28)';
+    roundRect(440, 212, 400, 56, 22, true);
+    ctx.fillStyle = '#fff7f9';
+    ctx.font = '900 26px -apple-system, BlinkMacSystemFont, sans-serif';
+    ctx.fillText('迎亲出发', 570, 248);
+    ctx.fillStyle = '#a8424a';
+    ctx.fillRect(0, GROUND_Y, W, H - GROUND_Y);
+    ctx.fillStyle = 'rgba(255, 211, 106, .36)';
+    for (let x = -120; x < W + 160; x += 150) {
+      ctx.fillRect(x - (game.cameraX * .8) % 150, GROUND_Y + 18, 88, 8);
+    }
+  }
+
+  function drawWeddingGardenScene(t) {
+    drawSoftSky('#f5a7c2', '#ffe7bd');
+    drawClouds(t, 'rgba(255,255,255,.74)');
+    ctx.fillStyle = '#77b86a';
+    ctx.fillRect(0, 388, W, 224);
+    ctx.fillStyle = '#4c9a58';
+    for (let x = -90; x < W + 140; x += 130) {
+      const px = x - (game.cameraX * .18) % 130;
+      roundRect(px, 360 + Math.sin((x + t * 80) / 60) * 6, 110, 74, 28, true);
+    }
+    for (let x = -60; x < W + 120; x += 96) {
+      const px = x - (game.cameraX * .45) % 96;
+      drawHeart(px + 24, 520 + Math.sin(t * 5 + x) * 4, .24, '#ff75a8');
+      ctx.fillStyle = '#ffd36a';
+      ctx.fillRect(px + 56, 536, 8, 8);
+    }
+    ctx.strokeStyle = '#fff2c2';
+    ctx.lineWidth = 12;
+    ctx.beginPath();
+    ctx.arc(640, 384, 132 + Math.sin(t * Math.PI) * 4, Math.PI, Math.PI * 2);
+    ctx.stroke();
+    ctx.strokeStyle = '#ffb3c8';
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.arc(640, 386, 112, Math.PI, Math.PI * 2);
+    ctx.stroke();
+    ctx.fillStyle = '#d69a6a';
+    ctx.fillRect(0, 548, W, 64);
+    ctx.fillStyle = '#b96d52';
+    ctx.fillRect(0, GROUND_Y, W, H - GROUND_Y);
+    ctx.fillStyle = 'rgba(255, 245, 252, .28)';
+    for (let i = 0; i < 14; i++) {
+      const x = (i * 94 - game.cameraX * .25) % (W + 120) - 60;
+      const y = 126 + (i * 37) % 260 + Math.sin(t * 5 + i) * 10;
+      ctx.fillRect(x, y, 10, 6);
+    }
+  }
+
+  function drawWeddingPalaceScene(t) {
+    drawSoftSky('#f7c38e', '#ffe8cf');
+    const glow = ctx.createRadialGradient(640, 280, 60, 640, 280, 460);
+    glow.addColorStop(0, 'rgba(255, 211, 106, .38)');
+    glow.addColorStop(1, 'rgba(255, 211, 106, 0)');
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = '#d6a06d';
+    roundRect(330, 246, 460, 272, 20, true);
+    ctx.fillStyle = '#b77b58';
+    for (let x = 370; x <= 730; x += 90) {
+      roundRect(x, 296, 38, 218, 16, true);
+      ctx.fillStyle = '#f1d2a7';
+      ctx.fillRect(x + 8, 318, 22, 92);
+      ctx.fillStyle = '#b77b58';
+    }
+    ctx.fillStyle = '#f0c078';
+    ctx.beginPath();
+    ctx.moveTo(300, 250);
+    ctx.lineTo(560, 152 + Math.sin(t * Math.PI) * 4);
+    ctx.lineTo(820, 250);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255, 247, 249, .72)';
+    ctx.lineWidth = 8;
+    ctx.beginPath();
+    ctx.moveTo(520, GROUND_Y);
+    ctx.lineTo(595, 420);
+    ctx.lineTo(685, 420);
+    ctx.lineTo(760, GROUND_Y);
+    ctx.stroke();
+    ctx.fillStyle = '#c94154';
+    ctx.beginPath();
+    ctx.moveTo(500, GROUND_Y);
+    ctx.lineTo(590, 420);
+    ctx.lineTo(690, 420);
+    ctx.lineTo(780, GROUND_Y);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255, 211, 106, .38)';
+    roundRect(488, 120 + Math.sin(t * Math.PI) * 4, 304, 54, 24, true);
+    ctx.fillStyle = '#fff7f9';
+    ctx.font = '900 24px -apple-system, BlinkMacSystemFont, sans-serif';
+    ctx.fillText('美泉宫花门', 568, 156);
+    ctx.fillStyle = '#c78d5f';
+    ctx.fillRect(0, GROUND_Y, W, H - GROUND_Y);
   }
 
   function currentSceneInfo() {
     const progress = clamp(game.cameraX / currentChapter().endX, 0, 1);
     const scenes = isChapterTwo() ? [
-      { id: 'disney', title: '上海迪士尼', desc: '烟火和城堡之间，约会像童话开场。', from: 0, to: .27 },
-      { id: 'universal', title: '环球影城', desc: '魔法街巷里，笑声离得很近。', from: .27, to: .52 },
-      { id: 'hongkong', title: '香港维多利亚港', desc: '夜色和海风，陪她挑中发财款哈奇猫。', from: .52, to: .77 },
-      { id: 'macau', title: '澳门大三巴', desc: '石阶前的挂件，轻轻晃出答案。', from: .77, to: 1 }
+      { id: 'disney', title: '上海迪士尼', desc: '烟火和城堡之间，约会像童话开场。', from: 0, to: .215 },
+      { id: 'universal', title: '环球影城', desc: '魔法街巷里，笑声离得很近。', from: .215, to: .433 },
+      { id: 'hongkong', title: '香港维多利亚港', desc: '夜色和海风，陪她挑中发财款哈奇猫。', from: .433, to: .617 },
+      { id: 'macau', title: '澳门大三巴', desc: '石阶和蛋挞小八，让回忆变得很甜。', from: .617, to: .805 },
+      { id: 'grandcanal', title: '北京通州大运河', desc: '水光和桥影之间，那句话终于快要说出口。', from: .805, to: 1 }
+    ] : (currentChapter().id === 'wedding' ? [
+      { id: 'weddingStreet', title: '迎亲街区', desc: '喜字和灯笼亮起，新郎出发去接她。', from: 0, to: .41 },
+      { id: 'weddingGarden', title: '婚礼花园', desc: '花瓣落在路边，掌声越来越近。', from: .41, to: .72 },
+      { id: 'weddingPalace', title: '美泉宫花门', desc: '最后一段红毯，通向正在等待的新娘。', from: .72, to: 1 }
     ] : [
-      { id: 'sports', title: '校园体育场', desc: '风越过跑道，青春刚好发光。', from: 0, to: .27 },
-      { id: 'cafeteria', title: '大学食堂', desc: '人声鼎沸里，第一眼很安静。', from: .27, to: .52 },
-      { id: 'qingdao', title: '青岛海边', desc: '海风很轻，离别被轻轻说起。', from: .52, to: .78 },
-      { id: 'graduation', title: '毕业季校园', desc: '一人启程，一人把青春继续写完。', from: .78, to: 1 }
-    ];
-    const scene = scenes.find(item => progress >= item.from && progress < item.to) || scenes[scenes.length - 1];
-    return { ...scene, localProgress: clamp((progress - scene.from) / (scene.to - scene.from), 0, 1) };
+      { id: 'cafeteria', title: '大学食堂', desc: '军训后的饭点很吵，第一眼却很安静。', from: 0, to: .42 },
+      { id: 'qingdao', title: '青岛海边', desc: '海风很轻，离别被轻轻说起。', from: .42, to: .75 },
+      { id: 'graduation', title: '毕业季校园', desc: '一人启程，一人把青春继续写完。', from: .75, to: 1 }
+    ]);
+    const index = Math.max(0, scenes.findIndex(item => progress >= item.from && progress < item.to));
+    const scene = scenes[index] || scenes[scenes.length - 1];
+    return {
+      ...scene,
+      index,
+      prev: scenes[index - 1] || null,
+      next: scenes[index + 1] || null,
+      localProgress: clamp((progress - scene.from) / (scene.to - scene.from), 0, 1)
+    };
   }
 
   function drawSceneLabel() {
-    if (!isChapterOne() && !isChapterTwo()) return;
+    if (!isChapterOne() && !isChapterTwo() && currentChapter().id !== 'wedding') return;
     const scene = currentSceneInfo();
     ctx.save();
     ctx.fillStyle = 'rgba(36, 8, 28, .58)';
@@ -1403,34 +2046,112 @@ canvas {
     ctx.restore();
   }
 
+  function drawSceneTransition() {
+    if ((!isChapterOne() && !isChapterTwo() && currentChapter().id !== 'wedding') || game.ceremony) return;
+    const scene = currentSceneInfo();
+    const edgeIn = scene.index > 0 ? clamp((.1 - scene.localProgress) / .1, 0, 1) : 0;
+    const edgeOut = scene.next ? clamp((scene.localProgress - .9) / .1, 0, 1) : 0;
+    const strength = Math.max(edgeIn, edgeOut);
+    if (strength <= 0) return;
+    const target = edgeOut > edgeIn ? scene.next : scene;
+    const alpha = easeOutCubic(strength);
+
+    ctx.save();
+    ctx.fillStyle = `rgba(20, 7, 18, ${alpha * .34})`;
+    ctx.fillRect(0, 0, W, H);
+    ctx.globalAlpha = alpha;
+    const cardW = 470;
+    const cardH = 86;
+    const y = 246 + Math.sin(performance.now() / 420) * 3;
+    ctx.fillStyle = 'rgba(38, 7, 24, .72)';
+    roundRect((W - cardW) / 2, y, cardW, cardH, 26, true);
+    ctx.strokeStyle = 'rgba(255, 211, 106, .54)';
+    ctx.lineWidth = 3;
+    roundRect((W - cardW) / 2, y, cardW, cardH, 26, false);
+    ctx.fillStyle = '#ffd36a';
+    ctx.font = '900 22px -apple-system, BlinkMacSystemFont, sans-serif';
+    ctx.fillText(edgeOut > edgeIn ? '下一站' : '抵达', 574, y + 32);
+    ctx.fillStyle = '#fff7f9';
+    ctx.font = '900 30px -apple-system, BlinkMacSystemFont, sans-serif';
+    ctx.fillText(target.title, 640 - ctx.measureText(target.title).width / 2, y + 66);
+    ctx.restore();
+  }
+
   function drawChapterBrideMoments() {
-    if ((!isChapterOne() && !isChapterTwo()) || game.ceremony) return;
+    if ((!isChapterOne() && !isChapterTwo() && currentChapter().id !== 'wedding') || game.ceremony) return;
     const scene = currentSceneInfo();
     const chapterOneMoments = {
-      sports: { x: 900, y: GROUND_Y - 178, scale: .86, set: frames.bride.idle, caption: '她也在这片校园里' },
-      cafeteria: { x: 760, y: GROUND_Y - 190, scale: .92, set: frames.bride.wave, caption: '人群里，第一眼很安静' },
-      qingdao: { x: 835, y: GROUND_Y - 180, scale: .9, set: frames.bride.wave, caption: '海风把她的笑吹得很轻' },
-      graduation: { x: 765, y: GROUND_Y - 190, scale: .92, set: frames.bride.idle, caption: '她还要继续留在校园' }
+      cafeteria: { x: 750, footY: GROUND_Y, drawH: 192, imageKey: 'brideCh1CafeteriaMilitary', set: frames.bride.wave, caption: '军训迷彩里，第一眼很安静' },
+      qingdao: { x: 790, footY: GROUND_Y, drawH: 178, imageKey: 'brideCh1Qingdao', set: frames.bride.wave, caption: '海风把她的笑吹得很轻' },
+      graduation: { x: 765, footY: GROUND_Y, drawH: 180, imageKey: 'brideCh1Graduation', set: frames.bride.idle, caption: '她还要继续留在校园' }
     };
     const chapterTwoMoments = {
-      disney: { x: 790, y: GROUND_Y - 190, scale: .92, set: frames.bride.happy, caption: '她站在灯火里，像童话的答案' },
-      universal: { x: 820, y: GROUND_Y - 188, scale: .9, set: frames.bride.wave, caption: '魔法街巷里，她笑得很近' },
-      hongkong: { x: 790, y: GROUND_Y - 190, scale: .92, set: frames.bride.happy, caption: '她挑中了发财款哈奇猫' },
-      macau: { x: 780, y: GROUND_Y - 190, scale: .92, set: frames.bride.wave, caption: '挂件轻晃，喜欢快要说出口' }
+      disney: { x: 740, y: GROUND_Y - 166, scale: .82, caption: '她戴着兔耳头箍，抱着星黛露等你' },
+      universal: { x: 752, y: GROUND_Y - 164, scale: .84, caption: '魔法街巷里，她笑得很近' },
+      hongkong: { x: 742, y: GROUND_Y - 166, scale: .82, caption: '她挑中了发财款小八' },
+      macau: { x: 735, y: GROUND_Y - 214, scale: .66, caption: '她穿着白裙，在石阶前等你' },
+      grandcanal: { x: 740, y: GROUND_Y - 178, scale: .76, caption: '运河边，她等他把话说完' }
     };
-    const moment = (isChapterTwo() ? chapterTwoMoments : chapterOneMoments)[scene.id];
+    const weddingMoments = {
+      weddingStreet: { x: 850, y: GROUND_Y - 190, scale: .86, set: frames.bride.wave, caption: '她已经在花门那边等你' },
+      weddingGarden: { x: 820, y: GROUND_Y - 194, scale: .9, set: frames.bride.happy, caption: '花瓣落下，婚礼越来越近' },
+      weddingPalace: { x: 740, y: GROUND_Y - 204, scale: .94, set: frames.bride.wave, caption: '她站在花门前等最后一段路' }
+    };
+    const moment = isChapterTwo() ? chapterTwoMoments[scene.id] : (currentChapter().id === 'wedding' ? weddingMoments[scene.id] : chapterOneMoments[scene.id]);
     if (!moment) return;
     const x = moment.x - Math.sin(scene.localProgress * Math.PI) * 18;
-    const y = moment.y + Math.sin(performance.now() / 900) * 3;
-    const w = 100 * moment.scale;
-    const h = 156 * moment.scale;
+    const y = (moment.y || 0) + Math.sin(performance.now() / 900) * 3;
 
     ctx.save();
     ctx.globalAlpha = .88;
+    if (isChapterTwo()) {
+      const availableFrames = scene.id === 'macau'
+        ? chapter2BrideFrames.macau.slice(0, 8)
+        : chapter2BrideFrames[scene.id];
+      const frame = choose(availableFrames, performance.now() / 1000, 1.35);
+      const scale = moment.scale || 1;
+      const w = frame.sw * scale;
+      const h = frame.sh * scale;
+      ctx.fillStyle = 'rgba(255, 245, 252, .18)';
+      roundRect(x - 16, y + h - 10, w + 32, 12, 6, true);
+      drawFrame(chapter2BrideImageKeys[scene.id], frame, x, y, w, h);
+      ctx.globalAlpha = .92;
+      ctx.fillStyle = 'rgba(36, 8, 28, .56)';
+      roundRect(x - 70, y - 36, 272, 30, 15, true);
+      ctx.fillStyle = '#fff7f9';
+      ctx.font = '700 14px -apple-system, BlinkMacSystemFont, sans-serif';
+      ctx.fillText(moment.caption, x - 56, y - 15);
+      ctx.restore();
+      return;
+    }
+
+    if (isChapterOne()) {
+      const frameSet = moment.imageKey === 'brideCh1CafeteriaMilitary' ? moment.set : chapter1NpcFrames;
+      const brideFrame = choose(frameSet, performance.now() / 1000, 4);
+      const visibleFrame = trimmedFrame(moment.imageKey || 'bride', brideFrame);
+      const h = moment.drawH || visibleFrame.sh * (moment.scale || 1);
+      const w = h * (visibleFrame.sw / visibleFrame.sh);
+      const footY = (moment.footY || GROUND_Y) + Math.sin(performance.now() / 900) * 2;
+      const drawY = footY - h;
+      ctx.fillStyle = 'rgba(255, 245, 252, .18)';
+      roundRect(x - 18, footY - 16, w + 36, 16, 8, true);
+      drawFrame(moment.imageKey || 'bride', visibleFrame, x, drawY, w, h);
+      ctx.globalAlpha = .92;
+      ctx.fillStyle = 'rgba(36, 8, 28, .56)';
+      roundRect(x - 62, drawY - 36, 248, 30, 15, true);
+      ctx.fillStyle = '#fff7f9';
+      ctx.font = '700 14px -apple-system, BlinkMacSystemFont, sans-serif';
+      ctx.fillText(moment.caption, x - 48, drawY - 15);
+      ctx.restore();
+      return;
+    }
+
+    const w = 100 * moment.scale;
+    const h = 156 * moment.scale;
     ctx.fillStyle = 'rgba(255, 245, 252, .18)';
     roundRect(x - 18, y + h - 16, w + 36, 16, 8, true);
     const brideFrame = choose(moment.set, performance.now() / 1000, 4);
-    drawFrame('bride', brideFrame, x, y, w, h);
+    drawFrame(moment.imageKey || 'bride', brideFrame, x, y, w, h);
     ctx.globalAlpha = .92;
     ctx.fillStyle = 'rgba(36, 8, 28, .56)';
     roundRect(x - 62, y - 36, 248, 30, 15, true);
@@ -1445,6 +2166,10 @@ canvas {
     drawClouds(t, '#ffffff');
     ctx.fillStyle = '#77bf5c';
     ctx.fillRect(0, 390, W, 160);
+    ctx.fillStyle = '#5fa753';
+    for (let x = -80; x < W + 120; x += 130) {
+      ctx.fillRect(x - (game.cameraX * .16) % 130, 382, 72, 18);
+    }
     ctx.fillStyle = '#d86e5a';
     ctx.fillRect(0, 486, W, 126);
     ctx.strokeStyle = 'rgba(255,255,255,.75)';
@@ -1455,7 +2180,30 @@ canvas {
       ctx.lineTo(W, y + Math.sin(t * Math.PI) * 6);
       ctx.stroke();
     }
+    ctx.strokeStyle = 'rgba(255,255,255,.52)';
+    ctx.lineWidth = 3;
+    for (let x = -80; x < W + 120; x += 180) {
+      const px = x - (game.cameraX * .36) % 180;
+      ctx.beginPath();
+      ctx.arc(px, 612, 132, Math.PI * 1.08, Math.PI * 1.92);
+      ctx.stroke();
+    }
     drawSchoolBuildings('#f5c48c', '#af6a55');
+    ctx.fillStyle = 'rgba(255, 247, 249, .66)';
+    roundRect(500, 130 + Math.sin(t * Math.PI) * 4, 280, 54, 18, true);
+    ctx.fillStyle = '#bf5b4f';
+    ctx.font = '900 24px -apple-system, BlinkMacSystemFont, sans-serif';
+    ctx.fillText('校园运动会', 570, 164);
+    ctx.fillStyle = '#ffcf6a';
+    for (let x = 116; x < W; x += 330) {
+      ctx.fillRect(x, 318, 8, 76);
+      ctx.beginPath();
+      ctx.moveTo(x + 8, 320);
+      ctx.lineTo(x + 70, 338 + Math.sin(t * 5 + x) * 4);
+      ctx.lineTo(x + 8, 356);
+      ctx.closePath();
+      ctx.fill();
+    }
     ctx.fillStyle = 'rgba(60, 36, 28, .12)';
     ctx.fillRect(0, GROUND_Y, W, H - GROUND_Y);
   }
@@ -1467,14 +2215,36 @@ canvas {
     ctx.fillStyle = '#e18e58';
     ctx.fillRect(0, 360, W, 26);
     for (let x = -120; x < W + 160; x += 210) {
+      const px = x - (game.cameraX * .18) % 210;
       ctx.fillStyle = 'rgba(255,255,255,.62)';
-      roundRect(x - (game.cameraX * .18) % 210, 296, 120, 88, 12, true);
+      roundRect(px, 296, 120, 88, 12, true);
+      ctx.fillStyle = '#b85f44';
+      ctx.font = '900 15px -apple-system, BlinkMacSystemFont, sans-serif';
+      ctx.fillText(x % 420 === 0 ? '热汤' : '今日菜单', px + 22, 326);
+      ctx.fillStyle = 'rgba(255, 211, 106, .68)';
+      ctx.fillRect(px + 22, 348, 76, 8);
+    }
+    ctx.fillStyle = 'rgba(255, 247, 249, .28)';
+    roundRect(472, 180 + Math.sin(t * Math.PI) * 3, 336, 58, 20, true);
+    ctx.fillStyle = '#8b4d36';
+    ctx.font = '900 24px -apple-system, BlinkMacSystemFont, sans-serif';
+    ctx.fillText('大学食堂', 586, 216);
+    ctx.fillStyle = 'rgba(116, 61, 42, .38)';
+    for (let x = 42; x < W; x += 92) {
+      const px = x - (game.cameraX * .24) % 92;
+      ctx.beginPath();
+      ctx.arc(px, 458 + Math.sin(t * 4 + x) * 3, 13, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillRect(px - 8, 472, 16, 36);
     }
     ctx.fillStyle = '#8b4d36';
     for (let x = 90; x < W; x += 310) {
       roundRect(x, 505 + Math.sin(t * Math.PI) * 3, 150, 18, 9, true);
       ctx.fillRect(x + 18, 523, 14, 64);
       ctx.fillRect(x + 118, 523, 14, 64);
+      ctx.fillStyle = '#f6d7a8';
+      roundRect(x + 50, 486, 48, 14, 7, true);
+      ctx.fillStyle = '#8b4d36';
     }
     ctx.fillStyle = '#b87549';
     ctx.fillRect(0, GROUND_Y, W, H - GROUND_Y);
@@ -1484,6 +2254,18 @@ canvas {
     drawSoftSky('#6fc7ff', '#f5e2b8');
     ctx.fillStyle = '#56b8d7';
     ctx.fillRect(0, 392, W, 120);
+    ctx.fillStyle = 'rgba(255,255,255,.82)';
+    for (let i = 0; i < 5; i++) {
+      const x = 150 + i * 220 - (game.cameraX * .08) % 220;
+      const y = 178 + (i % 2) * 28 + Math.sin(t * 4 + i) * 5;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.quadraticCurveTo(x + 18, y - 18, x + 36, y);
+      ctx.quadraticCurveTo(x + 54, y - 18, x + 72, y);
+      ctx.strokeStyle = 'rgba(255,255,255,.82)';
+      ctx.lineWidth = 4;
+      ctx.stroke();
+    }
     ctx.strokeStyle = 'rgba(255,255,255,.66)';
     ctx.lineWidth = 4;
     for (let i = 0; i < 7; i++) {
@@ -1498,8 +2280,31 @@ canvas {
     }
     ctx.fillStyle = '#edd293';
     ctx.fillRect(0, 512, W, 100);
+    ctx.strokeStyle = '#9b6b48';
+    ctx.lineWidth = 8;
+    ctx.beginPath();
+    ctx.moveTo(120, 482);
+    ctx.lineTo(430, 456 + Math.sin(t * Math.PI) * 4);
+    ctx.stroke();
+    ctx.fillStyle = '#8a5a3b';
+    for (let x = 140; x <= 420; x += 56) {
+      ctx.fillRect(x, 456, 10, 72);
+    }
+    ctx.fillStyle = '#fff7f9';
+    ctx.beginPath();
+    ctx.moveTo(660, 374);
+    ctx.lineTo(710, 374);
+    ctx.lineTo(684, 334 + Math.sin(t * 3) * 3);
+    ctx.closePath();
+    ctx.fill();
     ctx.fillStyle = '#d9b16c';
     ctx.fillRect(0, GROUND_Y, W, H - GROUND_Y);
+    ctx.fillStyle = 'rgba(154, 105, 62, .32)';
+    for (let x = 80; x < W; x += 180) {
+      ctx.beginPath();
+      ctx.ellipse(x - (game.cameraX * .22) % 180, 548, 18, 8, -.35, 0, Math.PI * 2);
+      ctx.fill();
+    }
     ctx.fillStyle = '#df6b61';
     roundRect(930, 284, 48, 116, 12, true);
     ctx.fillStyle = '#fff';
@@ -1516,8 +2321,38 @@ canvas {
       ctx.fillRect(x, 210 + (i % 3) * 22, 34, 22);
       ctx.fillRect(x + 8, 232 + (i % 3) * 22, 18, 58);
     }
+    ctx.fillStyle = 'rgba(43, 37, 45, .68)';
+    for (let x = 80; x < W; x += 240) {
+      const px = x - (game.cameraX * .18) % 240;
+      ctx.beginPath();
+      ctx.moveTo(px, 250);
+      ctx.lineTo(px + 42, 234 + Math.sin(t * 4 + x) * 3);
+      ctx.lineTo(px + 84, 250);
+      ctx.lineTo(px + 42, 266);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillRect(px + 39, 266, 6, 24);
+    }
     ctx.fillStyle = '#c9935f';
     ctx.fillRect(0, 512, W, 100);
+    ctx.fillStyle = '#f5dfba';
+    roundRect(140, 374, 180, 112, 16, true);
+    ctx.fillStyle = '#b17658';
+    ctx.font = '900 20px -apple-system, BlinkMacSystemFont, sans-serif';
+    ctx.fillText('毕业合影', 190, 410);
+    ctx.strokeStyle = '#b17658';
+    ctx.lineWidth = 4;
+    ctx.strokeRect(172, 424, 116, 42);
+    ctx.fillStyle = '#6a443b';
+    ctx.fillRect(980, 470, 54, 70);
+    ctx.fillStyle = '#d9a062';
+    roundRect(965, 442, 84, 54, 12, true);
+    ctx.strokeStyle = '#fff2c2';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(984, 442);
+    ctx.quadraticCurveTo(1006, 416, 1030, 442);
+    ctx.stroke();
     ctx.fillStyle = '#a96d4a';
     ctx.fillRect(0, GROUND_Y, W, H - GROUND_Y);
     ctx.fillStyle = 'rgba(255,255,255,.18)';
@@ -1609,6 +2444,60 @@ canvas {
     ctx.fillRect(0, GROUND_Y, W, H - GROUND_Y);
     ctx.fillStyle = 'rgba(255, 117, 168, .18)';
     roundRect(486, 116 + Math.sin(t * Math.PI) * 3, 308, 52, 22, true);
+  }
+
+  function drawGrandCanalScene(t) {
+    drawSoftSky('#f7b77a', '#ffe6ba');
+    drawClouds(t, 'rgba(255,255,255,.72)');
+
+    ctx.fillStyle = 'rgba(115, 86, 72, .42)';
+    for (let x = -80; x < W + 160; x += 170) {
+      const px = x - (game.cameraX * .1) % 170;
+      ctx.fillRect(px, 306, 96, 126);
+      ctx.fillStyle = 'rgba(255, 226, 154, .42)';
+      ctx.fillRect(px + 18, 334, 16, 18);
+      ctx.fillRect(px + 58, 364, 16, 18);
+      ctx.fillStyle = 'rgba(115, 86, 72, .42)';
+    }
+
+    ctx.fillStyle = '#4ea7be';
+    ctx.fillRect(0, 410, W, 118);
+    ctx.strokeStyle = 'rgba(255,255,255,.58)';
+    ctx.lineWidth = 4;
+    for (let i = 0; i < 6; i++) {
+      ctx.beginPath();
+      for (let x = -40; x <= W + 40; x += 42) {
+        const y = 430 + i * 16 + Math.sin((x + game.cameraX * .18) / 82 + t * 5 + i) * 4;
+        if (x === -40) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+
+    ctx.strokeStyle = '#c78d5f';
+    ctx.lineWidth = 10;
+    ctx.beginPath();
+    ctx.moveTo(120, 418);
+    ctx.quadraticCurveTo(640, 270 + Math.sin(t * Math.PI) * 6, 1160, 418);
+    ctx.stroke();
+    ctx.strokeStyle = '#ffe1a3';
+    ctx.lineWidth = 3;
+    for (let x = 160; x <= 1120; x += 80) {
+      ctx.beginPath();
+      ctx.moveTo(x, 404);
+      ctx.lineTo(x + 42, 374 + Math.sin((x / 80) + t * 2) * 4);
+      ctx.stroke();
+    }
+
+    ctx.fillStyle = '#d79b67';
+    ctx.fillRect(0, 528, W, 84);
+    ctx.fillStyle = '#b87755';
+    ctx.fillRect(0, GROUND_Y, W, H - GROUND_Y);
+    ctx.fillStyle = 'rgba(255, 211, 106, .28)';
+    roundRect(478, 122 + Math.sin(t * Math.PI) * 4, 324, 54, 24, true);
+    ctx.fillStyle = '#fff7f9';
+    ctx.font = '900 24px -apple-system, BlinkMacSystemFont, sans-serif';
+    ctx.fillText('通州大运河', 570, 158);
   }
 
   function drawStars(t) {
@@ -1768,71 +2657,129 @@ canvas {
     ctx.restore();
   }
 
+  function drawHeart(cx, cy, scale, color) {
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.scale(scale, scale);
+    ctx.fillStyle = color;
+    ctx.fillRect(-10, -4, 8, 8);
+    ctx.fillRect(2, -4, 8, 8);
+    ctx.fillRect(-14, 2, 28, 10);
+    ctx.fillRect(-10, 12, 20, 8);
+    ctx.fillRect(-5, 20, 10, 6);
+    ctx.restore();
+  }
+
+  function drawLoveKeepsakeOverlay(ceremony) {
+    const elapsed = ceremony.time - 6.4;
+    if (elapsed < 0) return;
+    const alpha = Math.min(clamp(elapsed / .55, 0, 1), 1 - clamp((elapsed - 2.5) / .6, 0, 1));
+    if (alpha <= 0) return;
+
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = 'rgba(20, 7, 18, .5)';
+    ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = 'rgba(255, 245, 232, .94)';
+    roundRect(396, 126, 488, 430, 34, true);
+    ctx.strokeStyle = 'rgba(255, 211, 106, .72)';
+    ctx.lineWidth = 4;
+    roundRect(396, 126, 488, 430, 34, false);
+    ctx.shadowColor = 'rgba(255, 211, 106, .7)';
+    ctx.shadowBlur = 22;
+    drawOriginalGoldPendant(640, 282, 172);
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = '#8b4d36';
+    ctx.font = '900 32px -apple-system, BlinkMacSystemFont, sans-serif';
+    ctx.fillText('定情之物', 568, 420);
+    ctx.fillStyle = 'rgba(139, 77, 54, .78)';
+    ctx.font = '800 20px -apple-system, BlinkMacSystemFont, sans-serif';
+    ctx.fillText('这枚金色挂坠，见证他们正式在一起。', 466, 462);
+    ctx.restore();
+  }
+
+  function drawLoveEmbraceAnimation(ceremony) {
+    const elapsed = Math.max(0, ceremony.time - 2.2);
+    const index = clamp(Math.floor(elapsed / .55), 0, loveEmbraceFrames.length - 1);
+    const frame = loveEmbraceFrames[index];
+    const scale = 1.18;
+    const w = frame.sw * scale;
+    const h = frame.sh * scale;
+    const x = 640 - w / 2;
+    const y = GROUND_Y - h - 8;
+    ctx.save();
+    ctx.fillStyle = 'rgba(255, 245, 252, .22)';
+    roundRect(x - 24, y + h - 12, w + 48, 14, 7, true);
+    drawFrame('loveEmbrace', frame, x, y, w, h);
+    if (elapsed > 1.6) {
+      const t = performance.now() / 1000;
+      for (let i = 0; i < 4; i++) {
+        const hx = 560 + i * 36 + Math.sin(t * 2 + i) * 8;
+        const hy = 218 + Math.cos(t * 2.4 + i) * 8;
+        drawHeart(hx, hy, .34 + i * .03, i % 2 ? '#ffd36a' : '#ff75a8');
+      }
+    }
+    ctx.restore();
+  }
+
   function drawLoveGoal(x, ceremony) {
     const centerX = ceremony ? 640 : x + 80;
-    ctx.fillStyle = 'rgba(255, 245, 252, .56)';
-    roundRect(centerX - 250, GROUND_Y - 270, 500, 260, 30, true);
-    ctx.strokeStyle = 'rgba(255, 117, 168, .42)';
-    ctx.lineWidth = 4;
-    roundRect(centerX - 250, GROUND_Y - 270, 500, 260, 30, false);
+    ctx.save();
+    ctx.fillStyle = 'rgba(255, 245, 252, .18)';
+    roundRect(centerX - 190, GROUND_Y - 122, 380, 28, 14, true);
+    ctx.globalAlpha = ceremony && ceremony.time >= 2.2 ? .48 : 1;
+    drawCatSouvenir(centerX + 160, GROUND_Y - 154, .78, '#ffd36a');
+    drawOriginalGoldPendant(centerX - 164, GROUND_Y - 152, 74);
+    ctx.restore();
 
-    ctx.fillStyle = '#ffb3c8';
-    roundRect(centerX - 150, GROUND_Y - 112, 300, 24, 12, true);
-    ctx.fillStyle = '#ffd36a';
-    ctx.font = '900 30px -apple-system, BlinkMacSystemFont, sans-serif';
-    ctx.fillText('YES', centerX - 28, GROUND_Y - 166);
-    drawCatSouvenir(centerX + 126, GROUND_Y - 150, 1.2, '#ffd36a');
-    drawCatSouvenir(centerX - 160, GROUND_Y - 140, .95, '#ff75a8');
-
-    const brideSet = ceremony && ceremony.time > 2.2 ? frames.bride.happy : frames.bride.wave;
-    const brideFrame = choose(brideSet, performance.now() / 1000, 4);
-    drawFrame('bride', brideFrame, ceremony ? ceremony.brideX : centerX + 94, GROUND_Y - 198, 100, 156);
+    if (ceremony && ceremony.time >= 2.2) {
+      drawLoveEmbraceAnimation(ceremony);
+    } else {
+      const frame = choose(chapter2BrideFrames.grandcanal, performance.now() / 1000, 1.35);
+      const brideDrawX = ceremony ? ceremony.brideX : centerX + 94;
+      const scale = .76;
+      drawFrame('brideCh2GrandCanal', frame, brideDrawX, GROUND_Y - 178, frame.sw * scale, frame.sh * scale);
+    }
 
     if (ceremony) {
-      ctx.fillStyle = 'rgba(38, 7, 24, .5)';
-      roundRect(320, 104, 640, 92, 24, true);
+      drawLoveKeepsakeOverlay(ceremony);
+      const text = ceremony.time < 2.2 ? '通州大运河边，他终于把喜欢说出口。' : '新娘：好呀，那我们就在一起吧。';
+      const subText = ceremony.time >= 2.2 ? '他把金色挂坠轻轻戴到她身上，然后他们紧紧拥抱。' : '';
+      ctx.fillStyle = 'rgba(38, 7, 24, .56)';
+      roundRect(270, 620, 740, subText ? 72 : 48, 22, true);
       ctx.strokeStyle = 'rgba(255, 211, 106, .42)';
-      roundRect(320, 104, 640, 92, 24, false);
+      roundRect(270, 620, 740, subText ? 72 : 48, 22, false);
       ctx.fillStyle = '#fff7f9';
-      ctx.font = '900 24px -apple-system, BlinkMacSystemFont, sans-serif';
-      const text = ceremony.time < 2.2 ? '旅行的最后，她把答案藏进笑里。' : '新娘：好呀，那我们就在一起吧。';
-      ctx.fillText(text, ceremony.time < 2.2 ? 430 : 424, 148);
-      if (ceremony.time >= 2.2) {
+      ctx.font = '900 23px -apple-system, BlinkMacSystemFont, sans-serif';
+      ctx.fillText(text, ceremony.time < 2.2 ? 394 : 442, 650);
+      if (subText) {
         ctx.fillStyle = '#ffd36a';
-        ctx.font = '800 20px -apple-system, BlinkMacSystemFont, sans-serif';
-        ctx.fillText('那些周边和票根，都变成了相恋的纪念。', 426, 178);
+        ctx.font = '800 18px -apple-system, BlinkMacSystemFont, sans-serif';
+        ctx.fillText(subText, 390, 678);
       }
     }
   }
 
   function drawFarewellGoal(x, ceremony) {
     const centerX = ceremony ? 640 : x + 80;
-    ctx.fillStyle = 'rgba(255, 244, 219, .5)';
-    roundRect(centerX - 250, GROUND_Y - 276, 500, 266, 28, true);
-    ctx.strokeStyle = 'rgba(139, 77, 54, .36)';
-    ctx.lineWidth = 4;
-    roundRect(centerX - 250, GROUND_Y - 276, 500, 266, 28, false);
+    ctx.fillStyle = 'rgba(255, 244, 219, .22)';
+    roundRect(centerX - 210, GROUND_Y - 82, 420, 24, 12, true);
+    const capFrame = chapter1CollectibleFrames.graduationCap;
+    const photoFrame = chapter1CollectibleFrames.graduationPhoto;
+    const visibleCapFrame = trimmedFrame('chapter1Collectibles', capFrame);
+    const capH = 82;
+    const capW = capH * (visibleCapFrame.sw / visibleCapFrame.sh);
+    drawFrame('chapter1Collectibles', visibleCapFrame, centerX - 185, GROUND_Y - 156, capW, capH);
+    const visiblePhotoFrame = trimmedFrame('chapter1Collectibles', photoFrame);
+    const photoH = 92;
+    const photoW = photoH * (visiblePhotoFrame.sw / visiblePhotoFrame.sh);
+    drawFrame('chapter1Collectibles', visiblePhotoFrame, centerX + 92, GROUND_Y - 168, photoW, photoH);
 
-    ctx.fillStyle = '#e6a978';
-    ctx.fillRect(centerX - 204, GROUND_Y - 236, 408, 128);
-    ctx.fillStyle = '#96584c';
-    ctx.fillRect(centerX - 220, GROUND_Y - 258, 440, 26);
-    ctx.fillStyle = 'rgba(255,255,255,.62)';
-    for (let wx = centerX - 166; wx <= centerX + 130; wx += 74) {
-      ctx.fillRect(wx, GROUND_Y - 206, 38, 28);
-      ctx.fillRect(wx, GROUND_Y - 160, 38, 28);
-    }
-
-    ctx.fillStyle = '#a96d4a';
-    roundRect(centerX - 155, GROUND_Y - 72, 310, 18, 9, true);
-    ctx.fillStyle = '#6f4a34';
-    roundRect(centerX + 178, GROUND_Y - 120, 58, 76, 10, true);
-    ctx.strokeStyle = '#6f4a34';
-    ctx.strokeRect(centerX + 194, GROUND_Y - 138, 24, 18);
-
-    const brideSet = ceremony && ceremony.time > 2.2 ? frames.bride.happy : frames.bride.wave;
-    const brideFrame = choose(brideSet, performance.now() / 1000, 4);
-    drawFrame('bride', brideFrame, ceremony ? ceremony.brideX : centerX + 98, GROUND_Y - 198, 100, 156);
+    const brideFrame = choose(chapter1NpcFrames, performance.now() / 1000, 4);
+    const visibleBrideFrame = trimmedFrame('brideCh1Graduation', brideFrame);
+    const brideH = 180;
+    const brideW = brideH * (visibleBrideFrame.sw / visibleBrideFrame.sh);
+    drawFrame('brideCh1Graduation', visibleBrideFrame, ceremony ? ceremony.brideX : centerX + 98, GROUND_Y - brideH, brideW, brideH);
 
     if (ceremony) {
       ctx.fillStyle = 'rgba(38, 7, 24, .5)';
@@ -1853,21 +2800,116 @@ canvas {
 
   function drawEntities() {
     for (const entity of game.entities) {
+      if (entity.type === 'pickup') continue;
       const x = entity.worldX - game.cameraX;
       if (x < -260 || x > W + 260) continue;
-      if (game.ceremony && entity.type !== 'pickup') continue;
+      if (game.ceremony) continue;
       if (entity.type === 'roadblock') drawSingle('roadblock', assetRects.roadblock, x - 8, entity.y - 16, entity.w + 18, entity.h + 20);
       if (entity.type === 'softObstacle') drawSoftObstacle(entity, x);
+      if (entity.type === 'sceneMonster') drawSceneMonster(entity, x);
       if (entity.type === 'redPacket') {
         const set = entity.hitTimer > 0 ? frames.redPacket.hit : frames.redPacket.walk;
         drawFrame('redPacket', choose(set, entity.animTime, 7), x - 28, entity.y - 26, 128, 128);
       }
       if (entity.type === 'balloon') drawFrame('balloon', choose(frames.balloon.float, entity.animTime, 5), x - 28, entity.y - 30, 128, 150);
-      if (entity.type === 'pickup') drawPickup(entity, x);
+    }
+    for (const entity of game.entities) {
+      if (entity.type !== 'pickup') continue;
+      const x = entity.worldX - game.cameraX;
+      if (x < -260 || x > W + 260) continue;
+      drawPickup(entity, x);
     }
   }
 
+  function drawSceneMonster(entity, x) {
+    const frames = chapter2SceneMonsterFrames[entity.scene] || chapter2SceneMonsterFrames.disney;
+    const pair = entity.variant % 2;
+    const frameSet = entity.scene === 'disney' && entity.variant % 2 === 1
+      ? [frames[2]].filter(Boolean)
+      : [frames[pair * 2], frames[pair * 2 + 1]].filter(Boolean);
+    const frame = choose(frameSet.length ? frameSet : frames, entity.animTime, 3.4);
+    const bob = Math.sin(entity.animTime * 5) * 1.5;
+    const isDisneyQueen = entity.scene === 'disney' && entity.variant % 2 === 1;
+    const drawH = isDisneyQueen ? 245 : (entity.scene === 'hongkong' ? 201 : 224);
+    const drawW = drawH * (frame.sw / frame.sh);
+    const dx = x + entity.w / 2 - drawW / 2;
+    const footY = GROUND_Y + bob;
+    const dy = footY - drawH;
+    ctx.save();
+    if (entity.hitTimer > 0) ctx.globalAlpha = .62;
+    ctx.fillStyle = 'rgba(43, 22, 28, .2)';
+    roundRect(dx + 14, GROUND_Y - 15, drawW - 28, 12, 6, true);
+    drawFrame('chapter2SceneMonsters', frame, dx, dy, drawW, drawH);
+    ctx.restore();
+  }
+
+  function drawSanjiObstacle(entity, x) {
+    ctx.save();
+    const image = img('sanjiObstacle');
+    if (image) {
+      const bob = Math.sin(entity.animTime * 3) * 1.5;
+      const drawH = 178;
+      const drawW = 175;
+      const cx = x + entity.w / 2;
+      const cy = GROUND_Y - drawH / 2 + bob;
+      const angle = Math.sin(entity.animTime * 4) * Math.PI / 12;
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(angle);
+      ctx.drawImage(image, -drawW / 2, -drawH / 2, drawW, drawH);
+      ctx.restore();
+    } else {
+      drawSanji(x + entity.w / 2, entity.y + entity.h / 2, entity.animTime);
+    }
+    ctx.fillStyle = 'rgba(36, 8, 28, .66)';
+    roundRect(x - 8, entity.y - 24, entity.label.length * 16 + 22, 26, 13, true);
+    ctx.fillStyle = '#fff7f9';
+    ctx.font = '700 14px -apple-system, BlinkMacSystemFont, sans-serif';
+    ctx.fillText(entity.label, x + 3, entity.y - 6);
+    ctx.restore();
+  }
+
   function drawSoftObstacle(entity, x) {
+    if (entity.label === '山治') {
+      drawSanjiObstacle(entity, x);
+      return;
+    }
+    if (isChapterOne()) {
+      const frames = chapter1ObstacleFrames[entity.label];
+      if (frames) {
+        const frame = choose(frames, entity.animTime, 1.4);
+        const visibleFrame = trimmedFrame('chapter1Obstacles', frame);
+        const bob = Math.sin(entity.animTime * 4) * 1.2;
+        const drawH = 172;
+        const drawW = drawH * (visibleFrame.sw / visibleFrame.sh);
+        const dx = x + entity.w / 2 - drawW / 2;
+        const dy = GROUND_Y - drawH + bob;
+        ctx.save();
+        ctx.fillStyle = 'rgba(43, 22, 28, .18)';
+        roundRect(dx + 12, GROUND_Y - 16, drawW - 24, 12, 6, true);
+        drawFrame('chapter1Obstacles', visibleFrame, dx, dy, drawW, drawH);
+        ctx.restore();
+        return;
+      }
+    }
+    if (isChapterTwo()) {
+      const sceneId = chapter2ObstacleSceneByLabel[entity.label];
+      const frames = chapter2TouristObstacleFrames[sceneId];
+      if (frames) {
+        const frame = choose(frames, entity.animTime, 1.4);
+        const bob = Math.sin(entity.animTime * 4) * 1.5;
+        const drawH = 199;
+        const drawW = drawH * (frame.sw / frame.sh);
+        const dx = x + entity.w / 2 - drawW / 2;
+        const dy = GROUND_Y - drawH + bob;
+        ctx.save();
+        ctx.fillStyle = 'rgba(43, 22, 28, .18)';
+        roundRect(dx + 12, GROUND_Y - 16, drawW - 24, 12, 6, true);
+        drawFrame('chapter2TouristObstacles', frame, dx, dy, drawW, drawH);
+        ctx.restore();
+        return;
+      }
+    }
     const colors = {
       '赶课人群': '#5b8def',
       '排队队伍': '#f49a54',
@@ -1881,16 +2923,6 @@ canvas {
     };
     const color = colors[entity.label] || '#8aa2d6';
     ctx.save();
-    if (entity.label === '山治') {
-      drawSanji(x + entity.w / 2, entity.y + entity.h / 2, entity.animTime);
-      ctx.fillStyle = 'rgba(36, 8, 28, .66)';
-      roundRect(x - 8, entity.y - 24, entity.label.length * 16 + 22, 26, 13, true);
-      ctx.fillStyle = '#fff7f9';
-      ctx.font = '700 14px -apple-system, BlinkMacSystemFont, sans-serif';
-      ctx.fillText(entity.label, x + 3, entity.y - 6);
-      ctx.restore();
-      return;
-    }
     ctx.fillStyle = 'rgba(43, 22, 28, .18)';
     roundRect(x + 8, GROUND_Y - 16, entity.w - 12, 12, 6, true);
     for (let i = 0; i < 2; i++) {
@@ -1918,12 +2950,16 @@ canvas {
   }
 
   function drawPickup(entity, x) {
-    if (entity.item === 'luckyCat' || entity.item === 'catCharm') {
-      drawCatSouvenir(x + entity.w / 2, entity.y + entity.h / 2, entity.item === 'luckyCat' ? .9 : .74, entity.item === 'luckyCat' ? '#ffd36a' : '#ff75a8');
+    if (chapter1CollectibleItems.includes(entity.item)) {
+      drawChapterOneCollectible(entity.item, x + entity.w / 2, entity.y + entity.h / 2, entity.animTime);
       return;
     }
-    if (['zootopiaBadge', 'stellalouDoll', 'harryMagnet', 'onePieceMagnet'].includes(entity.item)) {
+    if (chapter2CollectibleItems.includes(entity.item)) {
       drawTravelCollectible(entity.item, x + entity.w / 2, entity.y + entity.h / 2, entity.animTime);
+      return;
+    }
+    if (chapter2FoodCollectibleItems.includes(entity.item)) {
+      drawFoodCollectible(entity.item, x + entity.w / 2, entity.y + entity.h / 2, entity.animTime);
       return;
     }
     const rectName = entity.item === 'heart' || entity.item === 'ring' ? 'heart' : entity.item;
@@ -1931,65 +2967,124 @@ canvas {
     drawSingle('items', rect, x, entity.y, entity.w, entity.h);
   }
 
-  function drawTravelCollectible(item, cx, cy, animTime) {
+  function drawChapterOneCollectible(item, cx, cy, animTime) {
+    const foodFrame = chapter1QingdaoFoodFrames[item];
+    const imageKey = foodFrame ? 'chapter1QingdaoFood' : 'chapter1Collectibles';
+    const frame = foodFrame || chapter1CollectibleFrames[item];
+    if (!frame) return;
+    const visibleFrame = trimmedFrame(imageKey, frame);
+    const bob = Math.sin(animTime * 4) * 3;
+    const maxSize = foodFrame ? 92 : 82;
+    const scale = Math.min(maxSize / visibleFrame.sw, maxSize / visibleFrame.sh);
+    const w = visibleFrame.sw * scale;
+    const h = visibleFrame.sh * scale;
     ctx.save();
-    ctx.translate(cx, cy + Math.sin(animTime * 4) * 3);
-    if (item === 'zootopiaBadge') {
-      ctx.fillStyle = '#4bb6c7';
-      ctx.beginPath();
-      ctx.arc(0, 0, 25, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.strokeStyle = '#ffd36a';
-      ctx.lineWidth = 5;
-      ctx.stroke();
-      ctx.fillStyle = '#fff7f9';
-      ctx.font = '900 18px -apple-system, BlinkMacSystemFont, sans-serif';
-      ctx.fillText('Z', -6, 7);
-      ctx.fillStyle = '#ffd36a';
-      ctx.fillRect(-14, 23, 28, 8);
-    } else if (item === 'stellalouDoll') {
-      ctx.fillStyle = '#b59cff';
-      ctx.beginPath();
-      ctx.ellipse(0, 4, 22, 28, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.beginPath();
-      ctx.ellipse(-12, -24, 8, 24, -.35, 0, Math.PI * 2);
-      ctx.ellipse(12, -24, 8, 24, .35, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = '#3b0c16';
-      ctx.beginPath();
-      ctx.arc(-7, 0, 3, 0, Math.PI * 2);
-      ctx.arc(7, 0, 3, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = '#ff75a8';
-      roundRect(-18, 18, 36, 10, 5, true);
-    } else if (item === 'harryMagnet') {
-      ctx.fillStyle = '#5b3e6f';
-      roundRect(-24, -22, 48, 44, 8, true);
-      ctx.fillStyle = '#ffd36a';
-      ctx.font = '900 24px Georgia, serif';
-      ctx.fillText('H', -9, 9);
-      ctx.strokeStyle = '#ffd36a';
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.moveTo(8, -18); ctx.lineTo(-4, 1); ctx.lineTo(9, 1); ctx.lineTo(-4, 20);
-      ctx.stroke();
-    } else if (item === 'onePieceMagnet') {
-      ctx.fillStyle = '#df6b61';
-      roundRect(-24, -22, 48, 44, 8, true);
-      ctx.fillStyle = '#ffe29a';
-      ctx.beginPath();
-      ctx.arc(0, -2, 16, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.strokeStyle = '#3b0c16';
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.moveTo(-19, -10); ctx.lineTo(19, -10);
-      ctx.stroke();
-      ctx.fillStyle = '#3b0c16';
-      ctx.font = '900 14px -apple-system, BlinkMacSystemFont, sans-serif';
-      ctx.fillText('OP', -10, 18);
+    ctx.shadowColor = 'rgba(255, 211, 106, .55)';
+    ctx.shadowBlur = 12;
+    drawFrame(imageKey, visibleFrame, cx - w / 2, cy + bob - h / 2, w, h);
+    ctx.restore();
+  }
+
+  function drawFoodCollectible(item, cx, cy, animTime) {
+    const frame = chapter2FoodCollectibleFrames[item];
+    if (!frame) return;
+    const bob = Math.sin(animTime * 4) * 3;
+    const maxSize = 88;
+    const scale = Math.min(maxSize / frame.sw, maxSize / frame.sh);
+    const w = frame.sw * scale;
+    const h = frame.sh * scale;
+    ctx.save();
+    ctx.shadowColor = 'rgba(255, 211, 106, .5)';
+    ctx.shadowBlur = 12;
+    drawFrame('chapter2FoodCollectibles', frame, cx - w / 2, cy + bob - h / 2, w, h);
+    ctx.restore();
+  }
+
+  function drawTravelCollectible(item, cx, cy, animTime) {
+    const bob = Math.sin(animTime * 4) * 3;
+    ctx.save();
+    ctx.shadowColor = 'rgba(255, 211, 106, .65)';
+    ctx.shadowBlur = 14;
+    if (item === 'goldPendant') {
+      drawOriginalGoldPendant(cx, cy + bob, 118);
+      ctx.restore();
+      return;
     }
+    const frame = chapter2CollectibleFrames[item];
+    const maxSize = 82;
+    const scale = Math.min(maxSize / frame.sw, maxSize / frame.sh);
+    const w = frame.sw * scale;
+    const h = frame.sh * scale;
+    drawFrame('chapter2Collectibles', frame, cx - w / 2, cy + bob - h / 2, w, h);
+    ctx.restore();
+  }
+
+  function drawOriginalGoldPendant(cx, cy, maxSize) {
+    const image = img('goldPendantOriginal');
+    if (!image) {
+      drawGoldPendant(cx, cy, .72, performance.now() / 1000);
+      return;
+    }
+    const scale = Math.min(maxSize / image.width, maxSize / image.height);
+    const w = image.width * scale;
+    const h = image.height * scale;
+    ctx.drawImage(image, cx - w / 2, cy - h / 2, w, h);
+  }
+
+  function drawGoldPendant(cx, cy, scale, animTime = 0) {
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.scale(scale, scale);
+    const shine = .65 + Math.sin(animTime * 5) * .25;
+    ctx.strokeStyle = '#f7d66a';
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.arc(0, -18, 34, Math.PI * .16, Math.PI * .84);
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,255,255,.58)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(0, -18, 25, Math.PI * .2, Math.PI * .8);
+    ctx.stroke();
+
+    const g = ctx.createRadialGradient(-9, -2, 4, 0, 10, 34);
+    g.addColorStop(0, `rgba(255,255,222,${shine})`);
+    g.addColorStop(.38, '#ffd36a');
+    g.addColorStop(1, '#c78121');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.moveTo(0, -8);
+    ctx.bezierCurveTo(28, -25, 40, 12, 0, 42);
+    ctx.bezierCurveTo(-40, 12, -28, -25, 0, -8);
+    ctx.fill();
+    ctx.strokeStyle = '#fff0a8';
+    ctx.lineWidth = 4;
+    ctx.stroke();
+
+    ctx.fillStyle = 'rgba(255,255,255,.72)';
+    ctx.beginPath();
+    ctx.ellipse(-10, 5, 7, 13, .55, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#fff7c9';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(30, -20);
+    ctx.lineTo(44, -20);
+    ctx.moveTo(37, -27);
+    ctx.lineTo(37, -13);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawPendantCloseup(t) {
+    const fadeIn = clamp(t / .45, 0, 1);
+    const fadeOut = 1 - clamp((t - 3.4) / .75, 0, 1);
+    const alpha = Math.min(fadeIn, fadeOut);
+    if (alpha <= 0) return;
+
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    drawOriginalGoldPendant(640, 328, 130);
     ctx.restore();
   }
 
@@ -2087,10 +3182,36 @@ canvas {
   function drawBullets() {
     for (const bullet of game.bullets) {
       const x = bullet.worldX - game.cameraX;
+      if (isChapterTwo() && bullet.scene) {
+        drawChapter2AttackEffect(bullet, x);
+        continue;
+      }
       drawSingle('candy', assetRects.candy, x, bullet.y, bullet.w, bullet.h);
       ctx.fillStyle = 'rgba(255, 211, 106, .28)';
       ctx.fillRect(x - 18, bullet.y + 9, 20, 4);
     }
+  }
+
+  function drawChapter2AttackEffect(bullet, x) {
+    const t = (bullet.maxLife || 1.15) - bullet.life;
+    const cx = x + bullet.w / 2;
+    const cy = bullet.y + bullet.h / 2 + Math.sin(t * 14) * 2;
+    const scene = bullet.scene;
+    const key = scene === 'disney'
+      ? 'attackFxDisney'
+      : (scene === 'universal' ? 'attackFxUniversal' : (scene === 'grandcanal' ? 'attackFxGrandCanal' : 'attackFxHkMacau'));
+    const image = img(key);
+    if (!image) {
+      drawSingle('candy', assetRects.candy, x, bullet.y, bullet.w, bullet.h);
+      return;
+    }
+    const rect = chapter2AttackFxVisibleRects[key] || r(0, 0, image.width, image.height);
+    const drawW = scene === 'universal' ? 54 : 48;
+    const drawH = drawW * (rect.sh / rect.sw);
+    ctx.save();
+    ctx.globalAlpha = .96;
+    ctx.drawImage(image, rect.sx, rect.sy, rect.sw, rect.sh, cx - drawW / 2, cy - drawH / 2, drawW, drawH);
+    ctx.restore();
   }
 
   function drawPlayer() {
@@ -2101,7 +3222,45 @@ canvas {
     else if (Math.abs(player.vx) < 10 && game.cameraX < 30) { set = frames.groom.idle; fps = 5; }
     if (player.invuln > 0 && Math.floor(player.invuln * 16) % 2 === 0) return;
     const frame = choose(set, player.animTime, fps);
-    drawFrame('groom', frame, player.x - 36, player.y - 26, 168, 168);
+    const dx = player.x - 36;
+    const dy = player.y - 26;
+    const transition = game.outfitTransitionDuration ? clamp(game.outfitTransitionTime / game.outfitTransitionDuration, 0, 1) : 0;
+    if (transition > 0 && game.previousOutfitKey !== game.currentOutfitKey) {
+      ctx.save();
+      ctx.globalAlpha = easeOutCubic(transition);
+      drawFrame(game.previousOutfitKey, frame, dx, dy, 168, 168);
+      ctx.restore();
+      ctx.save();
+      ctx.globalAlpha = easeOutCubic(1 - transition);
+      drawFrame(game.currentOutfitKey, frame, dx, dy, 168, 168);
+      ctx.restore();
+      drawOutfitTransitionSparkles(dx + 84, dy + 86, 1 - transition);
+      return;
+    }
+    drawFrame(game.currentOutfitKey || 'groom', frame, dx, dy, 168, 168);
+  }
+
+  function drawOutfitTransitionSparkles(cx, cy, progress) {
+    const scene = currentSceneInfo();
+    const color = scene.id === 'universal' ? '#79f2a6' : '#ffd36a';
+    ctx.save();
+    ctx.globalAlpha = Math.sin(clamp(progress, 0, 1) * Math.PI);
+    ctx.strokeStyle = color;
+    ctx.fillStyle = color;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 56 + progress * 18, 0, Math.PI * 2);
+    ctx.stroke();
+    for (let i = 0; i < 10; i++) {
+      const angle = progress * Math.PI * 2 + i * Math.PI * .2;
+      const radius = 42 + (i % 3) * 18;
+      const x = cx + Math.cos(angle) * radius;
+      const y = cy + Math.sin(angle) * radius * .72;
+      ctx.beginPath();
+      ctx.arc(x, y, 3 + (i % 2), 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
   }
 
   function drawParticles() {
@@ -2192,6 +3351,33 @@ canvas {
   }
 
   function drawRect(rect) { ctx.strokeRect(rect.x, rect.y, rect.w, rect.h); }
+
+  const trimmedFrameCache = Object.create(null);
+  function trimmedFrame(name, frame) {
+    const image = img(name);
+    if (!image) return frame;
+    const key = `${name}:${frame.sx},${frame.sy},${frame.sw},${frame.sh}`;
+    if (trimmedFrameCache[key]) return trimmedFrameCache[key];
+    const scan = document.createElement('canvas');
+    scan.width = frame.sw;
+    scan.height = frame.sh;
+    const scanCtx = scan.getContext('2d');
+    scanCtx.drawImage(image, frame.sx, frame.sy, frame.sw, frame.sh, 0, 0, frame.sw, frame.sh);
+    const data = scanCtx.getImageData(0, 0, frame.sw, frame.sh).data;
+    let minX = frame.sw, minY = frame.sh, maxX = -1, maxY = -1;
+    for (let y = 0; y < frame.sh; y++) {
+      for (let x = 0; x < frame.sw; x++) {
+        if (data[(y * frame.sw + x) * 4 + 3] < 12) continue;
+        minX = Math.min(minX, x);
+        minY = Math.min(minY, y);
+        maxX = Math.max(maxX, x);
+        maxY = Math.max(maxY, y);
+      }
+    }
+    if (maxX < 0) return frame;
+    trimmedFrameCache[key] = r(frame.sx + minX, frame.sy + minY, maxX - minX + 1, maxY - minY + 1);
+    return trimmedFrameCache[key];
+  }
 
   function drawSingle(name, rect, dx, dy, dw, dh) {
     const image = img(name);
