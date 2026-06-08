@@ -211,7 +211,7 @@ canvas {
 <div class="game-page">
   <div class="game-shell" id="gameShell">
     <canvas id="gameCanvas" width="1280" height="720" aria-label="新郎冲冲冲游戏画面"></canvas>
-    <video class="success-video" id="successVideo" src="assets/wedding_success.mp4" playsinline preload="auto"></video>
+    <video class="success-video" id="successVideo" src="assets/wedding_success.mp4" playsinline preload="none"></video>
     <div class="screen-overlay show" id="screenOverlay"></div>
     <div class="touch-controls" id="touchControls">
       <div class="touch-group">
@@ -751,6 +751,8 @@ canvas {
     ceremonyAssetsStarted: false,
     ceremonyAssetsReady: false,
     assetPromises: {},
+    loadedAssetGroups: new Set(),
+    loadingMessage: '全部贴图加载中...',
     screenShake: 0,
     message: '',
     currentOutfitKey: 'groom',
@@ -871,26 +873,63 @@ canvas {
     }
   }
 
+  const initialAssetKeys = ['cover'];
+
+  const chapterAssetKeys = {
+    chapter1: [
+      'groom', 'hudBar',
+      'brideCh1CafeteriaMilitary', 'brideCh1Qingdao', 'brideCh1Graduation',
+      'bgCh1Cafeteria', 'bgCh1Qingdao', 'bgCh1Graduation',
+      'chapter1Collectibles', 'chapter1QingdaoFood', 'chapter1Obstacles'
+    ],
+    chapter2: [
+      'cover', 'groom', 'hudBar', 'candy',
+      'bgDisney', 'bgUniversal', 'bgHongKong', 'bgMacau', 'bgGrandCanal',
+      'groomCh2Disney', 'groomCh2Universal', 'groomCh2HkMacau', 'groomCh2GrandCanal',
+      'brideCh2Disney', 'brideCh2Universal', 'brideCh2HongKong', 'brideCh2Macau', 'brideCh2GrandCanal',
+      'chapter2TouristObstacles', 'chapter2Collectibles', 'chapter2FoodCollectibles',
+      'chapter2SceneMonsters', 'loveEmbrace', 'sanjiObstacle',
+      'attackFxDisney', 'attackFxUniversal', 'attackFxHkMacau', 'attackFxGrandCanal', 'goldPendantOriginal'
+    ],
+    wedding: [
+      'cover', 'groom', 'bride', 'items', 'hudBar', 'candy',
+      'streetBg', 'redPacket', 'balloon', 'trafficBoss', 'roadblock',
+      'weddingCar', 'weddingArch'
+    ]
+  };
+
   function loadAssets() {
-    const entries = Object.entries({ ...manifest, ...ceremonyManifest });
-    const progress = Object.fromEntries(entries.map(([name]) => [name, 0]));
+    game.loadingMessage = '首章贴图加载中...';
+    loadAssetKeys('initial', initialAssetKeys).then(() => {
+      game.mode = 'menu';
+      game.loadingMessage = '';
+      updateOverlay();
+    });
+  }
+
+  function loadAssetKeys(groupName, keys) {
+    const missingKeys = keys.filter(name => images[name] === undefined);
+    if (!missingKeys.length) {
+      game.loadedAssetGroups.add(groupName);
+      game.loadProgress = 1;
+      updateOverlay();
+      return Promise.resolve();
+    }
+    const progress = Object.fromEntries(missingKeys.map(name => [name, 0]));
     game.loadProgress = 0;
     updateOverlay();
 
     const onProgress = (name, value) => {
       progress[name] = Math.max(progress[name] || 0, value);
       const total = Object.values(progress).reduce((sum, item) => sum + item, 0);
-      game.loadProgress = total / entries.length;
+      game.loadProgress = total / missingKeys.length;
       updateOverlay();
     };
 
-    Promise.all(entries.map(([name, src]) => loadImage(name, src, value => onProgress(name, value)).then(() => {
+    return Promise.all(missingKeys.map(name => loadImage(name, manifest[name], value => onProgress(name, value)).then(() => {
       onProgress(name, 1);
     }))).then(() => {
-      game.ceremonyAssetsStarted = true;
-      game.ceremonyAssetsReady = true;
-      game.mode = 'menu';
-      updateOverlay();
+      game.loadedAssetGroups.add(groupName);
     });
   }
 
@@ -1017,7 +1056,23 @@ canvas {
 
   function startGame(chapterId = game.currentChapterId) {
     const id = chapters[chapterId]?.playable ? chapterId : 'chapter1';
+    const keys = chapterAssetKeys[id] || initialAssetKeys;
+    const missing = keys.some(name => images[name] === undefined);
+    if (missing) {
+      game.mode = 'loading';
+      game.loadingMessage = `${chapters[id].shortTitle}贴图加载中...`;
+      updateOverlay();
+      loadAssetKeys(id, keys).then(() => {
+        game.loadingMessage = '';
+        resetGame(id);
+        if (id === 'wedding') loadCeremonyAssets();
+        game.mode = 'playing';
+        updateOverlay();
+      });
+      return;
+    }
     resetGame(id);
+    if (id === 'wedding') loadCeremonyAssets();
     game.mode = 'playing';
     updateOverlay();
   }
@@ -1057,8 +1112,8 @@ canvas {
       overlay.innerHTML = `
         <div class="menu-card">
           <h1>新郎冲冲冲</h1>
-          <div class="tagline">全部贴图加载中...</div>
-          <p>正在一次性准备人物、道具、场景和婚礼结尾动画。加载完成后再进入菜单，游戏过程中就不会缺贴图。</p>
+          <div class="tagline">${game.loadingMessage || '贴图加载中...'}</div>
+          <p>先准备当前章节需要的图片，后续章节会在进入时继续加载，这样线上打开更快。</p>
           <p>加载进度：${Math.round(game.loadProgress * 100)}%</p>
         </div>`;
       return;
