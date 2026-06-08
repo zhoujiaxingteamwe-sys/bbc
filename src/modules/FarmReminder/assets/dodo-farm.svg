@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+  <!-- 农场草地底 -->
+  <rect x="5" y="60" width="90" height="35" rx="8" fill="#4caf50"/>
+  <!-- 草地条纹 -->
+  <rect x="5" y="60" width="90" height="8" rx="4" fill="#66bb6a"/>
+  <!-- 蔬菜叶子1 -->
+  <ellipse cx="35" cy="55" rx="12" ry="7" fill="#2e7d32" transform="rotate(-20 35 55)"/>
+  <ellipse cx="35" cy="55" rx="12" ry="7" fill="#43a047" transform="rotate(20 35 55)"/>
+  <!-- 蔬菜叶子2 -->
+  <ellipse cx="65" cy="58" rx="10" ry="6" fill="#388e3c" transform="rotate(-15 65 58)"/>
+  <ellipse cx="65" cy="58" rx="10" ry="6" fill="#4caf50" transform="rotate(15 65 58)"/>
+  <!-- 蔬菜叶子3 -->
+  <ellipse cx="50" cy="52" rx="11" ry="6" fill="#2e7d32" transform="rotate(-10 50 52)"/>
+  <ellipse cx="50" cy="52" rx="11" ry="6" fill="#66bb6a" transform="rotate(10 50 52)"/>
+  <!-- 农作物/萝卜 -->
+  <ellipse cx="50" cy="50" rx="7" ry="12" fill="#ff7043" transform="rotate(-5 50 50)"/>
+  <!-- 萝卜叶子 -->
+  <ellipse cx="47" cy="40" rx="4" ry="7" fill="#66bb6a" transform="rotate(-30 47 40)"/>
+  <ellipse cx="53" cy="40" rx="4" ry="7" fill="#4caf50" transform="rotate(30 53 40)"/>
+  <!-- Dodo 小鸟身体 -->
+  <ellipse cx="50" cy="30" rx="18" ry="16" fill="white"/>
+  <!-- Dodo 眼睛 -->
+  <circle cx="44" cy="27" r="3.5" fill="#222"/>
+  <circle cx="56" cy="27" r="3.5" fill="#222"/>
+  <!-- 眼睛高光 -->
+  <circle cx="45" cy="26" r="1.2" fill="white"/>
+  <circle cx="57" cy="26" r="1.2" fill="white"/>
+  <!-- 嘴巴 -->
+  <path d="M 47 33 Q 50 37 53 33" stroke="#ff7043" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+  <!-- 腮红 -->
+  <ellipse cx="41" cy="32" rx="3.5" ry="2" fill="#fca5a5" opacity="0.6"/>
+  <ellipse cx="59" cy="32" rx="3.5" ry="2" fill="#fca5a5" opacity="0.6"/>
+  <!-- 轮廓线 -->
+  <ellipse cx="50" cy="30" rx="18" ry="16" fill="none" stroke="#222" stroke-width="1.5"/>
+  <!-- 头顶叶子/头冠 -->
+  <ellipse cx="50" cy="14" rx="5" ry="8" fill="#4caf50"/>
+  <ellipse cx="47" cy="15" rx="3" ry="6" fill="#66bb6a" transform="rotate(-20 47 15)"/>
+  <ellipse cx="53" cy="15" rx="3" ry="6" fill="#43a047" transform="rotate(20 53 15)"/>
+</svg>
