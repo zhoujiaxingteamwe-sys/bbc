@@ -873,7 +873,7 @@ canvas {
     }
   }
 
-  const initialAssetKeys = ['cover'];
+  const initialAssetKeys = [];
 
   const chapterAssetKeys = {
     chapter1: [
@@ -899,12 +899,10 @@ canvas {
   };
 
   function loadAssets() {
-    game.loadingMessage = '首章贴图加载中...';
-    loadAssetKeys('initial', initialAssetKeys).then(() => {
-      game.mode = 'menu';
-      game.loadingMessage = '';
-      updateOverlay();
-    });
+    game.mode = 'menu';
+    game.loadingMessage = '';
+    updateOverlay();
+    loadImage('cover', manifest.cover);
   }
 
   function loadAssetKeys(groupName, keys) {
